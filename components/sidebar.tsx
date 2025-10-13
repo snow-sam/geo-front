@@ -6,6 +6,7 @@ import {
   Wrench,
   ClipboardList,
   Phone,
+  Route,
 } from "lucide-react";
 
 import {
@@ -41,6 +42,11 @@ const menuItems = [
     title: "Visitas",
     url: "/visitas",
     icon: ClipboardList,
+  },
+  {
+    title: "Roteiros",
+    url: "/roteiros",
+    icon: Route,
   },
   {
     title: "Chamados",
