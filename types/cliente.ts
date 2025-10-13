@@ -4,6 +4,7 @@ export interface Cliente {
   endereco: string;
   latitude?: number;
   longitude?: number;
+  placeId?: string;
   telefone?: string;
   email?: string;
   descricao?: string;

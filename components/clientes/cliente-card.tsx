@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Phone, MapPin, Calendar, Edit, Trash2 } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Edit, Trash2, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -83,7 +83,15 @@ export function ClienteCard({ cliente, onDelete, onEdit }: ClienteCardProps) {
             <span>Última visita: {formatDate(cliente.ultimaVisita)}</span>
           </div>
         )}
-        {!cliente.email && !cliente.telefone && !cliente.ultimaVisita && (
+        {cliente.placeId && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <MapPinned className="h-4 w-4 flex-shrink-0" />
+            <span className="text-xs font-mono truncate" title={cliente.placeId}>
+              Google Place ID: {cliente.placeId}
+            </span>
+          </div>
+        )}
+        {!cliente.email && !cliente.telefone && !cliente.ultimaVisita && !cliente.placeId && (
           <p className="text-sm text-gray-500 dark:text-gray-500 italic">
             Informações adicionais não cadastradas
           </p>

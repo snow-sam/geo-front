@@ -5,6 +5,7 @@ import { Search, Plus, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClienteCard } from "@/components/clientes/cliente-card";
+import { ClienteForm } from "@/components/clientes/cliente-form";
 import type { Cliente, ClienteFilters } from "@/types/cliente";
 import {
   Sheet,
@@ -14,7 +15,21 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import {
+  createCliente,
+  updateCliente,
+  deleteCliente,
+  type CreateClienteData,
+  type UpdateClienteData,
+} from "@/lib/api";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -23,7 +38,7 @@ interface ClientesListProps {
 }
 
 export function ClientesList({ initialClientes }: ClientesListProps) {
-  const [clientes] = useState<Cliente[]>(initialClientes);
+  const [clientes, setClientes] = useState<Cliente[]>(initialClientes);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<ClienteFilters>({
@@ -33,6 +48,10 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
     hasUltimaVisita: null,
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const filteredClientes = useMemo(() => {
     return clientes.filter((cliente) => {
@@ -106,14 +125,58 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
     filters.hasTelefone !== null ||
     filters.hasUltimaVisita !== null;
 
-  const handleDelete = (id: string) => {
-    // TODO: Implementar integração com API para delete
-    console.log("Deletar cliente:", id);
+  const handleDelete = async (id: string) => {
+    try {
+      setIsLoading(true);
+      await deleteCliente(id);
+      setClientes((prev) => prev.filter((c) => c.id !== id));
+    } catch (error) {
+      console.error("Erro ao deletar cliente:", error);
+      alert("Erro ao deletar cliente. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEdit = (id: string) => {
-    // TODO: Implementar integração com API para edição
-    console.log("Editar cliente:", id);
+    const cliente = clientes.find((c) => c.id === id);
+    if (cliente) {
+      setSelectedCliente(cliente);
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleCreate = async (values: CreateClienteData) => {
+    try {
+      setIsLoading(true);
+      const newCliente = await createCliente(values);
+      setClientes((prev) => [newCliente, ...prev]);
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error);
+      alert("Erro ao criar cliente. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdate = async (values: UpdateClienteData) => {
+    if (!selectedCliente) return;
+
+    try {
+      setIsLoading(true);
+      const updatedCliente = await updateCliente(selectedCliente.id, values);
+      setClientes((prev) =>
+        prev.map((c) => (c.id === selectedCliente.id ? updatedCliente : c))
+      );
+      setIsEditDialogOpen(false);
+      setSelectedCliente(null);
+    } catch (error) {
+      console.error("Erro ao atualizar cliente:", error);
+      alert("Erro ao atualizar cliente. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -294,7 +357,7 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
             </SheetContent>
           </Sheet>
 
-          <Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Cliente
           </Button>
@@ -376,6 +439,48 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
           </Button>
         </div>
       )}
+
+      {/* Modal de Criação */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do novo cliente. Campos marcados com * são
+              obrigatórios.
+            </DialogDescription>
+          </DialogHeader>
+          <ClienteForm
+            onSubmit={handleCreate}
+            onCancel={() => setIsCreateDialogOpen(false)}
+            isLoading={isLoading}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do cliente. Campos marcados com * são
+              obrigatórios.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCliente && (
+            <ClienteForm
+              cliente={selectedCliente}
+              onSubmit={handleUpdate}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+                setSelectedCliente(null);
+              }}
+              isLoading={isLoading}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

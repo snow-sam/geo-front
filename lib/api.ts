@@ -84,6 +84,51 @@ export async function getCliente(id: string): Promise<Cliente> {
   return fetchAPI<Cliente>(`/clientes/${id}`);
 }
 
+export interface CreateClienteData {
+  nome: string;
+  endereco: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  telefone?: string;
+  email?: string;
+  descricao?: string;
+}
+
+export async function createCliente(data: CreateClienteData): Promise<Cliente> {
+  return fetchAPI<Cliente>(`/clientes`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export interface UpdateClienteData {
+  nome?: string;
+  endereco?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  telefone?: string;
+  email?: string;
+  descricao?: string;
+}
+
+export async function updateCliente(
+  id: string,
+  data: UpdateClienteData
+): Promise<Cliente> {
+  return fetchAPI<Cliente>(`/clientes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCliente(id: string): Promise<void> {
+  return fetchAPI<void>(`/clientes/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // ==================== TÉCNICOS ====================
 
 export interface GetTecnicosParams {
