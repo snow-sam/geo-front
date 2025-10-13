@@ -37,7 +37,7 @@ export function TecnicoCard({ tecnico, onDelete, onEdit }: TecnicoCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200">
+    <Card className="hover:shadow-lg transition-shadow duration-200 flex flex-col h-full">
       <CardHeader>
         <CardTitle className="text-xl">{tecnico.nome}</CardTitle>
         <CardDescription className="flex items-start gap-2 mt-2">
@@ -45,7 +45,7 @@ export function TecnicoCard({ tecnico, onDelete, onEdit }: TecnicoCardProps) {
           <span className="text-sm">{tecnico.endereco}</span>
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <Car className="h-4 w-4 flex-shrink-0" />
           <span className="font-medium">Placa: {tecnico.placa}</span>
@@ -62,7 +62,7 @@ export function TecnicoCard({ tecnico, onDelete, onEdit }: TecnicoCardProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex gap-2 justify-end">
+      <CardFooter className="flex gap-2 justify-end mt-auto">
         <Button
           variant="outline"
           size="sm"
