@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GeoFront - Sistema de Gestão",
+  title: "RotGo - Sistema de Gestão",
   description: "Sistema de gestão para clientes, técnicos, visitas e chamados",
 };
 

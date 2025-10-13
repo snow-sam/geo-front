@@ -4,7 +4,7 @@ export default function Home() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Bem-vindo ao sistema de gestão GeoFront
+          Bem-vindo ao sistema de gestão RotGo
         </p>
       </div>
       
