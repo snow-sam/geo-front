@@ -1,6 +1,16 @@
 import { TecnicosList } from "@/components/tecnicos/tecnicos-list";
+import { getTecnicos } from "@/lib/api";
 
-export default function TecnicosPage() {
+export default async function TecnicosPage() {
+  let tecnicos = [];
+  
+  try {
+    const response = await getTecnicos({ limit: 100 });
+    tecnicos = response.data;
+  } catch (error) {
+    console.error("Erro ao carregar técnicos:", error);
+  }
+
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="mb-6">
@@ -9,7 +19,7 @@ export default function TecnicosPage() {
           Gerencie todos os técnicos cadastrados
         </p>
       </div>
-      <TecnicosList />
+      <TecnicosList initialTecnicos={tecnicos} />
     </div>
   );
 }

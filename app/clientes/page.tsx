@@ -1,6 +1,16 @@
 import { ClientesList } from "@/components/clientes/clientes-list";
+import { getClientes } from "@/lib/api";
 
-export default function ClientesPage() {
+export default async function ClientesPage() {
+  let clientes = [];
+  
+  try {
+    const response = await getClientes({ limit: 100 });
+    clientes = response.data;
+  } catch (error) {
+    console.error("Erro ao carregar clientes:", error);
+  }
+
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="mb-6">
@@ -9,7 +19,7 @@ export default function ClientesPage() {
           Gerencie todos os seus clientes cadastrados
         </p>
       </div>
-      <ClientesList />
+      <ClientesList initialClientes={clientes} />
     </div>
   );
 }

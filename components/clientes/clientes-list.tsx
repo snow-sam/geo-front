@@ -16,82 +16,14 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-// Dados mock - remover quando integrar com API real
-const mockClientes: Cliente[] = [
-  {
-    id: "1",
-    nome: "João Silva",
-    endereco: "Rua das Flores, 123, São Paulo - SP",
-    telefone: "(11) 98765-4321",
-    email: "joao.silva@email.com",
-    ultimaVisita: "2025-10-10",
-  },
-  {
-    id: "2",
-    nome: "Maria Santos",
-    endereco: "Av. Paulista, 1000, São Paulo - SP",
-    telefone: "(11) 91234-5678",
-    email: "maria.santos@email.com",
-    ultimaVisita: "2025-10-05",
-  },
-  {
-    id: "3",
-    nome: "Pedro Oliveira",
-    endereco: "Rua Augusta, 500, São Paulo - SP",
-  },
-  {
-    id: "4",
-    nome: "Ana Costa",
-    endereco: "Rua Consolação, 789, São Paulo - SP",
-    email: "ana.costa@email.com",
-  },
-  {
-    id: "5",
-    nome: "Carlos Mendes",
-    endereco: "Av. Faria Lima, 2000, São Paulo - SP",
-    telefone: "(11) 99999-8888",
-    ultimaVisita: "2025-10-12",
-  },
-  {
-    id: "6",
-    nome: "Juliana Ferreira",
-    endereco: "Rua Oscar Freire, 300, São Paulo - SP",
-    telefone: "(11) 97777-6666",
-    email: "juliana.ferreira@email.com",
-    ultimaVisita: "2025-10-08",
-  },
-  {
-    id: "7",
-    nome: "Roberto Alves",
-    endereco: "Rua Haddock Lobo, 150, São Paulo - SP",
-    telefone: "(11) 96666-5555",
-  },
-  {
-    id: "8",
-    nome: "Fernanda Lima",
-    endereco: "Av. Rebouças, 1234, São Paulo - SP",
-    email: "fernanda.lima@email.com",
-  },
-  {
-    id: "9",
-    nome: "Ricardo Gomes",
-    endereco: "Rua Estados Unidos, 600, São Paulo - SP",
-    telefone: "(11) 95555-4444",
-    email: "ricardo.gomes@email.com",
-    ultimaVisita: "2025-10-11",
-  },
-  {
-    id: "10",
-    nome: "Patrícia Rocha",
-    endereco: "Av. Brigadeiro Faria Lima, 3000, São Paulo - SP",
-    ultimaVisita: "2025-10-09",
-  },
-];
-
 const ITEMS_PER_PAGE = 6;
 
-export function ClientesList() {
-  const [clientes, setClientes] = useState<Cliente[]>(mockClientes);
+interface ClientesListProps {
+  initialClientes: Cliente[];
+}
+
+export function ClientesList({ initialClientes }: ClientesListProps) {
+  const [clientes] = useState<Cliente[]>(initialClientes);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<ClienteFilters>({
@@ -175,11 +107,12 @@ export function ClientesList() {
     filters.hasUltimaVisita !== null;
 
   const handleDelete = (id: string) => {
-    setClientes((prev) => prev.filter((cliente) => cliente.id !== id));
+    // TODO: Implementar integração com API para delete
+    console.log("Deletar cliente:", id);
   };
 
   const handleEdit = (id: string) => {
-    // TODO: Implementar edição de cliente
+    // TODO: Implementar integração com API para edição
     console.log("Editar cliente:", id);
   };
 

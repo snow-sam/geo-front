@@ -1,6 +1,16 @@
 import { RoteirosList } from "@/components/roteiros/roteiros-list";
+import { getRoteiros } from "@/lib/api";
 
-export default function RoteirosPage() {
+export default async function RoteirosPage() {
+  let roteiros = [];
+  
+  try {
+    const response = await getRoteiros({ limit: 100 });
+    roteiros = response.data;
+  } catch (error) {
+    console.error("Erro ao carregar roteiros:", error);
+  }
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -10,7 +20,7 @@ export default function RoteirosPage() {
         </p>
       </div>
 
-      <RoteirosList />
+      <RoteirosList initialRoteiros={roteiros} />
     </div>
   );
 }

@@ -2,8 +2,11 @@ export interface Cliente {
   id: string;
   nome: string;
   endereco: string;
+  latitude?: number;
+  longitude?: number;
   telefone?: string;
   email?: string;
+  descricao?: string;
   ultimaVisita?: string;
   createdAt?: string;
   updatedAt?: string;

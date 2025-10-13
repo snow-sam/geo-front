@@ -17,104 +17,6 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-// Dados mock - remover quando integrar com API real
-const mockVisitas: Visita[] = [
-  {
-    id: "1",
-    clienteId: "1",
-    clienteNome: "João Silva",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-    dataMarcada: "2025-10-13T09:00:00-03:00",
-    status: "pendente",
-    observacoes: "Manutenção preventiva do sistema",
-  },
-  {
-    id: "2",
-    clienteId: "2",
-    clienteNome: "Maria Santos",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-    dataMarcada: "2025-10-13T14:00:00-03:00",
-    status: "no_roteiro",
-    observacoes: "Instalação de novo equipamento",
-  },
-  {
-    id: "3",
-    clienteId: "3",
-    clienteNome: "Pedro Oliveira",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-    dataMarcada: "2025-10-13T10:30:00-03:00",
-    status: "realizada",
-  },
-  {
-    id: "4",
-    clienteId: "4",
-    clienteNome: "Ana Costa",
-    tecnicoId: "3",
-    tecnicoNome: "Roberto Alves",
-    dataMarcada: "2025-10-12T15:00:00-03:00",
-    status: "realizada",
-    observacoes: "Revisão anual concluída",
-  },
-  {
-    id: "5",
-    clienteId: "5",
-    clienteNome: "Carlos Mendes",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-    dataMarcada: "2025-10-13T11:00:00-03:00",
-    status: "no_roteiro",
-  },
-  {
-    id: "6",
-    clienteId: "6",
-    clienteNome: "Juliana Ferreira",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-    dataMarcada: "2025-10-14T09:30:00-03:00",
-    status: "pendente",
-  },
-  {
-    id: "7",
-    clienteId: "7",
-    clienteNome: "Roberto Alves",
-    tecnicoId: "3",
-    tecnicoNome: "Roberto Alves",
-    dataMarcada: "2025-10-13T16:00:00-03:00",
-    status: "pendente",
-  },
-  {
-    id: "8",
-    clienteId: "8",
-    clienteNome: "Fernanda Lima",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-    dataMarcada: "2025-10-12T08:00:00-03:00",
-    status: "realizada",
-  },
-  {
-    id: "9",
-    clienteId: "9",
-    clienteNome: "Ricardo Gomes",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-    dataMarcada: "2025-10-13T13:00:00-03:00",
-    status: "no_roteiro",
-    observacoes: "Atendimento de emergência",
-  },
-  {
-    id: "10",
-    clienteId: "10",
-    clienteNome: "Patrícia Rocha",
-    tecnicoId: "3",
-    tecnicoNome: "Roberto Alves",
-    dataMarcada: "2025-10-15T10:00:00-03:00",
-    status: "pendente",
-  },
-];
-
 const ITEMS_PER_PAGE = 6;
 
 // Função para obter a data atual no horário de Brasília (início do dia)
@@ -137,8 +39,13 @@ const getBrasiliaDateEnd = () => {
   return brasiliaDate.toISOString();
 };
 
-export function VisitasList() {
-  const [visitas, setVisitas] = useState<Visita[]>(mockVisitas);
+interface VisitasListProps {
+  initialVisitas: Visita[];
+  initialStats: VisitaStats;
+}
+
+export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) {
+  const [visitas] = useState<Visita[]>(initialVisitas);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<VisitaFilters>({
@@ -179,33 +86,6 @@ export function VisitasList() {
     });
   }, [visitas, searchTerm, filters]);
 
-  // Calcular estatísticas baseadas nas visitas filtradas por data
-  const stats: VisitaStats = useMemo(() => {
-    const visitasNoPeriodo = visitas.filter((visita) => {
-      if (!filters.dataInicio && !filters.dataFim) return true;
-      
-      const visitaDate = new Date(visita.dataMarcada);
-      let matches = true;
-      
-      if (filters.dataInicio) {
-        const dataInicio = new Date(filters.dataInicio);
-        matches = matches && visitaDate >= dataInicio;
-      }
-      if (filters.dataFim) {
-        const dataFim = new Date(filters.dataFim);
-        matches = matches && visitaDate <= dataFim;
-      }
-      
-      return matches;
-    });
-
-    return {
-      realizadas: visitasNoPeriodo.filter((v) => v.status === "realizada").length,
-      pendentes: visitasNoPeriodo.filter((v) => v.status === "pendente").length,
-      noRoteiro: visitasNoPeriodo.filter((v) => v.status === "no_roteiro").length,
-    };
-  }, [visitas, filters.dataInicio, filters.dataFim]);
-
   // Paginação
   const totalPages = Math.ceil(filteredVisitas.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -239,20 +119,18 @@ export function VisitasList() {
     filters.status !== "todos";
 
   const handleDelete = (id: string) => {
-    setVisitas((prev) => prev.filter((visita) => visita.id !== id));
+    // TODO: Implementar integração com API para delete
+    console.log("Deletar visita:", id);
   };
 
   const handleEdit = (id: string) => {
-    // TODO: Implementar edição de visita
+    // TODO: Implementar integração com API para edição
     console.log("Editar visita:", id);
   };
 
   const handleChangeStatus = (id: string, status: StatusVisita) => {
-    setVisitas((prev) =>
-      prev.map((visita) =>
-        visita.id === id ? { ...visita, status } : visita
-      )
-    );
+    // TODO: Implementar integração com API para mudar status
+    console.log("Mudar status da visita:", id, "para", status);
   };
 
   const formatDateForInput = (dateString: string | null) => {
@@ -264,7 +142,7 @@ export function VisitasList() {
   return (
     <div className="space-y-6">
       {/* Estatísticas */}
-      <VisitasStats stats={stats} />
+      <VisitasStats stats={initialStats} />
 
       {/* Barra de ações */}
       <div className="flex flex-col sm:flex-row gap-4">

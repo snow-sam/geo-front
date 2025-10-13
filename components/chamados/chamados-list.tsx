@@ -17,122 +17,6 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-// Dados mock - remover quando integrar com API real
-const mockChamados: Chamado[] = [
-  {
-    id: "1",
-    local: "Rua das Flores, 123 - Centro",
-    tipo: "Manutenção Preventiva",
-    descricao: "Verificar sistema de alarme e câmeras de segurança",
-    dataAbertura: "2025-10-01T08:30:00-03:00",
-    status: "fechado",
-    clienteId: "1",
-    clienteNome: "João Silva",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-  },
-  {
-    id: "2",
-    local: "Av. Principal, 456 - Bairro Alto",
-    tipo: "Instalação",
-    descricao: "Instalar novo sistema de controle de acesso",
-    dataAbertura: "2025-10-05T10:00:00-03:00",
-    status: "em_andamento",
-    clienteId: "2",
-    clienteNome: "Maria Santos",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-  },
-  {
-    id: "3",
-    local: "Rua do Comércio, 789 - Jardim",
-    tipo: "Suporte Técnico",
-    descricao: "Sistema apresentando falhas intermitentes",
-    dataAbertura: "2025-10-10T14:20:00-03:00",
-    status: "aberto",
-    clienteId: "3",
-    clienteNome: "Pedro Oliveira",
-  },
-  {
-    id: "4",
-    local: "Praça Central, 321 - Centro",
-    tipo: "Manutenção Corretiva",
-    descricao: "Câmera 3 sem imagem",
-    dataAbertura: "2025-10-12T09:15:00-03:00",
-    status: "aberto",
-    clienteId: "4",
-    clienteNome: "Ana Costa",
-  },
-  {
-    id: "5",
-    local: "Rua Nova, 555 - Vila Nova",
-    tipo: "Instalação",
-    descricao: "Instalar 5 câmeras de segurança",
-    dataAbertura: "2025-10-08T11:00:00-03:00",
-    status: "fechado",
-    clienteId: "5",
-    clienteNome: "Carlos Mendes",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-  },
-  {
-    id: "6",
-    local: "Av. das Indústrias, 888 - Distrito Industrial",
-    tipo: "Suporte Técnico",
-    descricao: "Configurar acesso remoto ao sistema",
-    dataAbertura: "2025-10-13T08:00:00-03:00",
-    status: "em_andamento",
-    clienteId: "6",
-    clienteNome: "Juliana Ferreira",
-    tecnicoId: "3",
-    tecnicoNome: "Roberto Alves",
-  },
-  {
-    id: "7",
-    local: "Rua dos Pinheiros, 234 - Pinheiros",
-    tipo: "Manutenção Preventiva",
-    descricao: "Revisão trimestral do sistema",
-    dataAbertura: "2025-10-11T13:30:00-03:00",
-    status: "aberto",
-    clienteId: "7",
-    clienteNome: "Roberto Alves",
-  },
-  {
-    id: "8",
-    local: "Av. Santos Dumont, 777 - Aeroporto",
-    tipo: "Instalação",
-    descricao: "Instalar sistema de detecção de incêndio",
-    dataAbertura: "2025-10-03T15:45:00-03:00",
-    status: "fechado",
-    clienteId: "8",
-    clienteNome: "Fernanda Lima",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-  },
-  {
-    id: "9",
-    local: "Rua do Porto, 999 - Porto",
-    tipo: "Manutenção Corretiva",
-    descricao: "Alarme disparando sem motivo",
-    dataAbertura: "2025-10-13T16:20:00-03:00",
-    status: "aberto",
-    clienteId: "9",
-    clienteNome: "Ricardo Gomes",
-  },
-  {
-    id: "10",
-    local: "Praça da Liberdade, 111 - Centro",
-    tipo: "Suporte Técnico",
-    descricao: "Treinamento da equipe para uso do sistema",
-    dataAbertura: "2025-10-07T10:30:00-03:00",
-    status: "fechado",
-    clienteId: "10",
-    clienteNome: "Patrícia Rocha",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-  },
-];
-
 const ITEMS_PER_PAGE = 6;
 
 // Função para obter o início do mês no horário de Brasília
@@ -158,8 +42,13 @@ const getBrasiliaMonthEnd = () => {
   return brasiliaDate.toISOString();
 };
 
-export function ChamadosList() {
-  const [chamados, setChamados] = useState<Chamado[]>(mockChamados);
+interface ChamadosListProps {
+  initialChamados: Chamado[];
+  initialStats: ChamadoStats;
+}
+
+export function ChamadosList({ initialChamados, initialStats }: ChamadosListProps) {
+  const [chamados] = useState<Chamado[]>(initialChamados);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<ChamadoFilters>({
@@ -202,33 +91,6 @@ export function ChamadosList() {
     });
   }, [chamados, searchTerm, filters]);
 
-  // Calcular estatísticas baseadas nos chamados filtrados por data
-  const stats: ChamadoStats = useMemo(() => {
-    const chamadosNoPeriodo = chamados.filter((chamado) => {
-      if (!filters.dataInicio && !filters.dataFim) return true;
-      
-      const chamadoDate = new Date(chamado.dataAbertura);
-      let matches = true;
-      
-      if (filters.dataInicio) {
-        const dataInicio = new Date(filters.dataInicio);
-        matches = matches && chamadoDate >= dataInicio;
-      }
-      if (filters.dataFim) {
-        const dataFim = new Date(filters.dataFim);
-        matches = matches && chamadoDate <= dataFim;
-      }
-      
-      return matches;
-    });
-
-    return {
-      abertos: chamadosNoPeriodo.filter((c) => c.status === "aberto").length,
-      emAndamento: chamadosNoPeriodo.filter((c) => c.status === "em_andamento").length,
-      fechados: chamadosNoPeriodo.filter((c) => c.status === "fechado").length,
-    };
-  }, [chamados, filters.dataInicio, filters.dataFim]);
-
   // Paginação
   const totalPages = Math.ceil(filteredChamados.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -262,20 +124,18 @@ export function ChamadosList() {
     filters.status !== "todos";
 
   const handleDelete = (id: string) => {
-    setChamados((prev) => prev.filter((chamado) => chamado.id !== id));
+    // TODO: Implementar integração com API para delete
+    console.log("Deletar chamado:", id);
   };
 
   const handleEdit = (id: string) => {
-    // TODO: Implementar edição de chamado
+    // TODO: Implementar integração com API para edição
     console.log("Editar chamado:", id);
   };
 
   const handleChangeStatus = (id: string, status: StatusChamado) => {
-    setChamados((prev) =>
-      prev.map((chamado) =>
-        chamado.id === id ? { ...chamado, status } : chamado
-      )
-    );
+    // TODO: Implementar integração com API para mudar status
+    console.log("Mudar status do chamado:", id, "para", status);
   };
 
   const formatDateForInput = (dateString: string | null) => {
@@ -287,7 +147,7 @@ export function ChamadosList() {
   return (
     <div className="space-y-6">
       {/* Estatísticas */}
-      <ChamadosStats stats={stats} />
+      <ChamadosStats stats={initialStats} />
 
       {/* Barra de ações */}
       <div className="flex flex-col sm:flex-row gap-4">

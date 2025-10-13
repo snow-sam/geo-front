@@ -7,81 +7,14 @@ import { Input } from "@/components/ui/input";
 import { TecnicoCard } from "@/components/tecnicos/tecnico-card";
 import type { Tecnico } from "@/types/tecnico";
 
-// Dados mock - remover quando integrar com API real
-const mockTecnicos: Tecnico[] = [
-  {
-    id: "1",
-    nome: "Carlos Alberto Silva",
-    endereco: "Rua dos Técnicos, 100, São Paulo - SP",
-    placa: "ABC-1234",
-    telefone: "(11) 98765-4321",
-  },
-  {
-    id: "2",
-    nome: "Roberto Fernandes",
-    endereco: "Av. Industrial, 500, São Paulo - SP",
-    placa: "DEF-5678",
-    telefone: "(11) 97654-3210",
-  },
-  {
-    id: "3",
-    nome: "Paulo Henrique Costa",
-    endereco: "Rua das Máquinas, 250, São Paulo - SP",
-    placa: "GHI-9012",
-  },
-  {
-    id: "4",
-    nome: "José Augusto Pereira",
-    endereco: "Av. dos Engenheiros, 750, São Paulo - SP",
-    placa: "JKL-3456",
-    telefone: "(11) 96543-2109",
-  },
-  {
-    id: "5",
-    nome: "Marcos Vinicius Santos",
-    endereco: "Rua da Manutenção, 320, São Paulo - SP",
-    placa: "MNO-7890",
-    telefone: "(11) 95432-1098",
-  },
-  {
-    id: "6",
-    nome: "Fernando Almeida",
-    endereco: "Av. Tecnológica, 180, São Paulo - SP",
-    placa: "PQR-1234",
-  },
-  {
-    id: "7",
-    nome: "André Luiz Moreira",
-    endereco: "Rua dos Mecânicos, 420, São Paulo - SP",
-    placa: "STU-5678",
-    telefone: "(11) 94321-0987",
-  },
-  {
-    id: "8",
-    nome: "Ricardo Oliveira",
-    endereco: "Av. da Indústria, 900, São Paulo - SP",
-    placa: "VWX-9012",
-  },
-  {
-    id: "9",
-    nome: "Thiago Martins",
-    endereco: "Rua dos Operadores, 650, São Paulo - SP",
-    placa: "YZA-3456",
-    telefone: "(11) 93210-9876",
-  },
-  {
-    id: "10",
-    nome: "Leonardo Rodrigues",
-    endereco: "Av. dos Profissionais, 1200, São Paulo - SP",
-    placa: "BCD-7890",
-    telefone: "(11) 92109-8765",
-  },
-];
-
 const ITEMS_PER_PAGE = 6;
 
-export function TecnicosList() {
-  const [tecnicos, setTecnicos] = useState<Tecnico[]>(mockTecnicos);
+interface TecnicosListProps {
+  initialTecnicos: Tecnico[];
+}
+
+export function TecnicosList({ initialTecnicos }: TecnicosListProps) {
+  const [tecnicos] = useState<Tecnico[]>(initialTecnicos);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -112,16 +45,17 @@ export function TecnicosList() {
   };
 
   const handleDelete = (id: string) => {
-    setTecnicos((prev) => prev.filter((tecnico) => tecnico.id !== id));
+    // TODO: Implementar integração com API para delete
+    console.log("Deletar técnico:", id);
   };
 
   const handleEdit = (id: string) => {
-    // TODO: Implementar edição de técnico
+    // TODO: Implementar integração com API para edição
     console.log("Editar técnico:", id);
   };
 
   const handleNewTecnico = () => {
-    // TODO: Implementar criação de técnico
+    // TODO: Implementar integração com API para criação
     console.log("Novo técnico");
   };
 

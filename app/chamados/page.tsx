@@ -1,6 +1,21 @@
 import { ChamadosList } from "@/components/chamados/chamados-list";
+import { getChamados, getChamadosStats } from "@/lib/api";
 
-export default function ChamadosPage() {
+export default async function ChamadosPage() {
+  let chamados = [];
+  let stats = { abertos: 0, emAndamento: 0, fechados: 0 };
+  
+  try {
+    const [chamadosResponse, statsResponse] = await Promise.all([
+      getChamados({ limit: 100 }),
+      getChamadosStats(),
+    ]);
+    chamados = chamadosResponse.data;
+    stats = statsResponse;
+  } catch (error) {
+    console.error("Erro ao carregar chamados:", error);
+  }
+
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="mb-6">
@@ -9,7 +24,7 @@ export default function ChamadosPage() {
           Gerencie e acompanhe todos os chamados técnicos e solicitações de serviço
         </p>
       </div>
-      <ChamadosList />
+      <ChamadosList initialChamados={chamados} initialStats={stats} />
     </div>
   );
 }

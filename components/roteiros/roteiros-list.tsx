@@ -16,160 +16,6 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-// Dados mock - remover quando integrar com API real
-const mockRoteiros: Roteiro[] = [
-  {
-    id: "1",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-    data: "2025-10-13T00:00:00-03:00",
-    distanciaTotal: 45.8,
-    tempoEstimado: 240,
-    clientes: [
-      {
-        clienteId: "1",
-        clienteNome: "João Silva",
-        clienteEndereco: "Rua das Flores, 123 - Centro",
-        ordem: 1,
-      },
-      {
-        clienteId: "3",
-        clienteNome: "Pedro Oliveira",
-        clienteEndereco: "Av. Paulista, 1000 - Bela Vista",
-        ordem: 2,
-      },
-      {
-        clienteId: "9",
-        clienteNome: "Ricardo Gomes",
-        clienteEndereco: "Rua Augusta, 456 - Consolação",
-        ordem: 3,
-      },
-    ],
-  },
-  {
-    id: "2",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-    data: "2025-10-13T00:00:00-03:00",
-    distanciaTotal: 32.5,
-    tempoEstimado: 180,
-    clientes: [
-      {
-        clienteId: "2",
-        clienteNome: "Maria Santos",
-        clienteEndereco: "Rua Vergueiro, 789 - Vila Mariana",
-        ordem: 1,
-      },
-      {
-        clienteId: "5",
-        clienteNome: "Carlos Mendes",
-        clienteEndereco: "Rua Oscar Freire, 321 - Jardins",
-        ordem: 2,
-      },
-    ],
-  },
-  {
-    id: "3",
-    tecnicoId: "3",
-    tecnicoNome: "Roberto Alves",
-    data: "2025-10-12T00:00:00-03:00",
-    distanciaTotal: 28.3,
-    tempoEstimado: 150,
-    clientes: [
-      {
-        clienteId: "4",
-        clienteNome: "Ana Costa",
-        clienteEndereco: "Av. Ipiranga, 200 - República",
-        ordem: 1,
-      },
-      {
-        clienteId: "8",
-        clienteNome: "Fernanda Lima",
-        clienteEndereco: "Rua da Consolação, 500 - Consolação",
-        ordem: 2,
-      },
-    ],
-  },
-  {
-    id: "4",
-    tecnicoId: "1",
-    tecnicoNome: "Carlos Mendes",
-    data: "2025-10-14T00:00:00-03:00",
-    distanciaTotal: 52.1,
-    tempoEstimado: 270,
-    clientes: [
-      {
-        clienteId: "6",
-        clienteNome: "Juliana Ferreira",
-        clienteEndereco: "Rua Haddock Lobo, 888 - Cerqueira César",
-        ordem: 1,
-      },
-      {
-        clienteId: "11",
-        clienteNome: "Bruno Martins",
-        clienteEndereco: "Av. Brigadeiro Faria Lima, 1500 - Jardim Paulistano",
-        ordem: 2,
-      },
-      {
-        clienteId: "12",
-        clienteNome: "Camila Rodrigues",
-        clienteEndereco: "Rua dos Pinheiros, 600 - Pinheiros",
-        ordem: 3,
-      },
-    ],
-  },
-  {
-    id: "5",
-    tecnicoId: "3",
-    tecnicoNome: "Roberto Alves",
-    data: "2025-10-15T00:00:00-03:00",
-    distanciaTotal: 38.7,
-    tempoEstimado: 200,
-    clientes: [
-      {
-        clienteId: "10",
-        clienteNome: "Patrícia Rocha",
-        clienteEndereco: "Rua Teodoro Sampaio, 1200 - Pinheiros",
-        ordem: 1,
-      },
-      {
-        clienteId: "13",
-        clienteNome: "Diego Almeida",
-        clienteEndereco: "Av. Rebouças, 3000 - Pinheiros",
-        ordem: 2,
-      },
-    ],
-  },
-  {
-    id: "6",
-    tecnicoId: "2",
-    tecnicoNome: "Ana Costa",
-    data: "2025-10-14T00:00:00-03:00",
-    distanciaTotal: 41.2,
-    tempoEstimado: 220,
-    clientes: [
-      {
-        clienteId: "14",
-        clienteNome: "Eduardo Silva",
-        clienteEndereco: "Rua Pamplona, 100 - Jardim Paulista",
-        ordem: 1,
-      },
-      {
-        clienteId: "15",
-        clienteNome: "Fabiana Costa",
-        clienteEndereco: "Av. Angélica, 2400 - Consolação",
-        ordem: 2,
-      },
-      {
-        clienteId: "16",
-        clienteNome: "Gabriel Santos",
-        clienteEndereco: "Rua Frei Caneca, 800 - Consolação",
-        ordem: 3,
-      },
-    ],
-  },
-];
-
 const ITEMS_PER_PAGE = 6;
 
 // Função para obter a data atual no horário de Brasília (início do dia)
@@ -192,8 +38,12 @@ const getBrasiliaDateEnd = () => {
   return brasiliaDate.toISOString();
 };
 
-export function RoteirosList() {
-  const [roteiros] = useState<Roteiro[]>(mockRoteiros);
+interface RoteirosListProps {
+  initialRoteiros: Roteiro[];
+}
+
+export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
+  const [roteiros] = useState<Roteiro[]>(initialRoteiros);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<RoteiroFilters>({
@@ -610,4 +460,3 @@ export function RoteirosList() {
     </div>
   );
 }
-

@@ -4,6 +4,9 @@ export interface Tecnico {
   endereco: string;
   placa: string;
   telefone?: string;
+  email?: string;
+  especialidade?: string;
+  ativo?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
