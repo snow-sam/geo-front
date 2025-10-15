@@ -14,32 +14,31 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PlacesAutocomplete } from "@/components/ui/places-autocomplete";
 import type { Cliente } from "@/types/cliente";
 
 const clienteSchema = z.object({
   nome: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
   endereco: z
     .string()
-    .min(5, { message: "Endereço deve ter no mínimo 5 caracteres" }),
-  latitude: z.coerce
+    .min(10, { message: "Endereço deve ter no mínimo 10 caracteres" }),
+  latitude: z
     .number()
-    .optional()
-    .refine((val) => val === undefined || (val >= -90 && val <= 90), {
-      message: "Latitude deve estar entre -90 e 90",
-    }),
-  longitude: z.coerce
+    .min(-90, { message: "Latitude deve estar entre -90 e 90" })
+    .max(90, { message: "Latitude deve estar entre -90 e 90" }),
+  longitude: z
     .number()
-    .optional()
-    .refine((val) => val === undefined || (val >= -180 && val <= 180), {
-      message: "Longitude deve estar entre -180 e 180",
-    }),
+    .min(-180, { message: "Longitude deve estar entre -180 e 180" })
+    .max(180, { message: "Longitude deve estar entre -180 e 180" }),
   placeId: z.string().optional(),
   telefone: z.string().optional(),
   email: z
     .string()
-    .email({ message: "Email inválido" })
     .optional()
-    .or(z.literal("")),
+    .refine(
+      (val) => !val || val === "" || z.string().email().safeParse(val).success,
+      { message: "Email inválido" }
+    ),
   descricao: z.string().optional(),
 });
 
@@ -63,8 +62,8 @@ export function ClienteForm({
     defaultValues: {
       nome: cliente?.nome || "",
       endereco: cliente?.endereco || "",
-      latitude: cliente?.latitude || undefined,
-      longitude: cliente?.longitude || undefined,
+      latitude: cliente?.latitude,
+      longitude: cliente?.longitude,
       placeId: cliente?.placeId || "",
       telefone: cliente?.telefone || "",
       email: cliente?.email || "",
@@ -72,9 +71,21 @@ export function ClienteForm({
     },
   });
 
+  const handleSubmit = (values: ClienteFormValues) => {
+    // Transformar strings vazias em undefined para campos opcionais
+    const cleanedValues = {
+      ...values,
+      placeId: values.placeId?.trim() || undefined,
+      telefone: values.telefone?.trim() || undefined,
+      email: values.email?.trim() || undefined,
+      descricao: values.descricao?.trim() || undefined,
+    };
+    onSubmit(cleanedValues);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="nome"
@@ -96,8 +107,23 @@ export function ClienteForm({
             <FormItem>
               <FormLabel>Endereço *</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Rua, número, bairro" />
+                <PlacesAutocomplete
+                  value={field.value}
+                  onChange={field.onChange}
+                  onPlaceSelected={(place) => {
+                    // Preencher automaticamente os campos relacionados
+                    form.setValue("endereco", place.address);
+                    form.setValue("latitude", place.latitude);
+                    form.setValue("longitude", place.longitude);
+                    form.setValue("placeId", place.placeId);
+                  }}
+                  placeholder="Digite o endereço e selecione da lista"
+                  disabled={isLoading}
+                />
               </FormControl>
+              <FormDescription>
+                Digite o endereço e selecione da lista. Latitude e longitude são obrigatórias.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -109,13 +135,21 @@ export function ClienteForm({
             name="latitude"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Latitude</FormLabel>
+                <FormLabel>Latitude *</FormLabel>
                 <FormControl>
                   <Input
-                    {...field}
                     type="number"
                     step="any"
                     placeholder="Ex: -23.55052"
+                    value={field.value?.toString() ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? undefined : parseFloat(value));
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -128,13 +162,21 @@ export function ClienteForm({
             name="longitude"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Longitude</FormLabel>
+                <FormLabel>Longitude *</FormLabel>
                 <FormControl>
                   <Input
-                    {...field}
                     type="number"
                     step="any"
                     placeholder="Ex: -46.633308"
+                    value={field.value?.toString() ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value === "" ? undefined : parseFloat(value));
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />

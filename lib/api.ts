@@ -87,18 +87,37 @@ export async function getCliente(id: string): Promise<Cliente> {
 export interface CreateClienteData {
   nome: string;
   endereco: string;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
   placeId?: string;
   telefone?: string;
   email?: string;
   descricao?: string;
 }
 
+/**
+ * Transforma dados do frontend (português) para o formato da API (inglês)
+ */
+function transformToApiFormat(data: CreateClienteData | UpdateClienteData): any {
+  const transformed: any = {};
+  
+  if ('nome' in data && data.nome !== undefined) transformed.name = data.nome;
+  if ('endereco' in data && data.endereco !== undefined) transformed.address = data.endereco;
+  if ('latitude' in data && data.latitude !== undefined) transformed.latitude = data.latitude;
+  if ('longitude' in data && data.longitude !== undefined) transformed.longitude = data.longitude;
+  if ('placeId' in data && data.placeId !== undefined) transformed.placeId = data.placeId;
+  if ('telefone' in data && data.telefone !== undefined) transformed.phone = data.telefone;
+  if ('email' in data && data.email !== undefined) transformed.email = data.email;
+  if ('descricao' in data && data.descricao !== undefined) transformed.description = data.descricao;
+  
+  return transformed;
+}
+
 export async function createCliente(data: CreateClienteData): Promise<Cliente> {
+  const apiData = transformToApiFormat(data);
   return fetchAPI<Cliente>(`/clientes`, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify(apiData),
   });
 }
 
@@ -117,9 +136,10 @@ export async function updateCliente(
   id: string,
   data: UpdateClienteData
 ): Promise<Cliente> {
+  const apiData = transformToApiFormat(data);
   return fetchAPI<Cliente>(`/clientes/${id}`, {
     method: "PUT",
-    body: JSON.stringify(data),
+    body: JSON.stringify(apiData),
   });
 }
 

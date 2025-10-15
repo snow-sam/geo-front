@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { GoogleMapsScript } from "@/components/google-maps-script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,6 +25,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
   return (
     <html lang="pt-BR">
       <body
@@ -41,6 +44,7 @@ export default function RootLayout({
             </div>
           </main>
         </SidebarProvider>
+        <GoogleMapsScript apiKey={googleMapsApiKey} />
       </body>
     </html>
   );

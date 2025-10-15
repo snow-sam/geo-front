@@ -149,6 +149,7 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
   const handleCreate = async (values: CreateClienteData) => {
     try {
       setIsLoading(true);
+      console.log(values);
       const newCliente = await createCliente(values);
       setClientes((prev) => [newCliente, ...prev]);
       setIsCreateDialogOpen(false);
