@@ -91,7 +91,6 @@ export function TecnicosList({ initialTecnicos }: TecnicosListProps) {
   const handleCreate = async (values: CreateTecnicoData) => {
     try {
       setIsLoading(true);
-      console.log(values);
       const newTecnico = await createTecnico(values);
       setTecnicos((prev) => [newTecnico, ...prev]);
       setIsCreateDialogOpen(false);

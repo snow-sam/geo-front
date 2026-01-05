@@ -55,7 +55,7 @@ export function RelatorioCard({
       />
     ));
   };
-  console.log("relatorio", relatorio);
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
       <CardHeader className="pb-3">

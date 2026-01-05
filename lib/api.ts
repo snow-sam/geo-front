@@ -38,11 +38,9 @@ export function setWorkspaceId(workspaceId: string | null): void {
     expires.setDate(expires.getDate() + 30);
     document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
     
-    console.log("[API] Workspace ID set:", workspaceId);
   } else {
     localStorage.removeItem("activeWorkspaceId");
     document.cookie = "x-workspace-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    console.log("[API] Workspace ID removed");
   }
 }
 
@@ -56,10 +54,6 @@ async function fetchAPI<T>(
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
   const workspaceId = getWorkspaceId();
-  
-  if (typeof window !== "undefined") {
-    console.log("[API] Request:", endpoint, "| x-workspace-id:", workspaceId);
-  }
 
   try {
     const response = await fetch(url, {
@@ -103,7 +97,6 @@ function buildQueryString(params: Record<string, any>): string {
       query.append(key, String(value));
     }
   });
-  console.log(query.toString())
   return query.toString() ? `?${query.toString()}` : "";
 }
 
@@ -399,7 +392,6 @@ export async function getVisitas(
       "tecnico(nome,endereco)",
     ], ...params
   });
-  console.log(queryString)
   return fetchAPI<PaginatedResponse<Visita>>(`/visitas${queryString}`);
 }
 
@@ -505,7 +497,6 @@ export async function getRoteiro(id: string): Promise<Roteiro> {
 export async function createSolicitacao(
   data: SolicitacaoFormValues
 ): Promise<Solicitacao> {
-  console.log(data)
   return fetchAPI<Solicitacao>(`/chamados/abertura`, {
     method: "POST",
     body: JSON.stringify(data),

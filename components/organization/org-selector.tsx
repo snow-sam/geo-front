@@ -66,7 +66,6 @@ export function OrgSelector() {
         await authClient.organization.setActive({ organizationId: firstOrg.id });
         setActiveOrg(firstOrg);
         updateWorkspaceId(firstOrg.id);
-        console.log("[OrgSelector] First org set as active:", firstOrg.id);
       }
     } catch (error) {
       console.error("Erro ao carregar organizações:", error);

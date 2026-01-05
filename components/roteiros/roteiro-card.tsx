@@ -38,7 +38,6 @@ export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
   const tecnicoNome = typeof roteiro.tecnico === 'object' && roteiro.tecnico 
     ? roteiro.tecnico.nome 
     : roteiro.tecnicoNome || "Técnico não definido";
-  console.log("roteiro", roteiro);
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">

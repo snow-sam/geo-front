@@ -64,14 +64,13 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
   const [isTecnicoDialogOpen, setIsTecnicoDialogOpen] = useState(false);
   const [isDataDialogOpen, setIsDataDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  console.log(visitas)
   const filteredVisitas = useMemo(() => {
     return visitas.filter((visita) => {
       // Filtro de busca por texto
       const matchesSearch =
         searchTerm === "" ||
-        visita.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        visita.tecnico.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        visita.cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        visita.tecnico?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         visita.observacoes?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Filtro de status
@@ -90,10 +89,8 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
           const dataFim = new Date(filters.dataFim);
           matchesDate = matchesDate && visitaDate <= dataFim;
         }
-        console.log(filters)
       }
       matchesDate = true;
-      // console.log(matchesSearch, matchesStatus, matchesDate)
       return matchesSearch && matchesStatus && matchesDate;
     });
   }, [visitas, searchTerm, filters]);

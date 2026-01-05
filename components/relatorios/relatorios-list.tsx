@@ -62,7 +62,6 @@ export function RelatoriosList() {
       }
 
       const response = await getRelatoriosVisita(params);
-      console.log("response", response);
       setRelatorios(response.data);
       setTotalPages(response.pageCount ?? 1);
       setTotal(response.count ?? 0);

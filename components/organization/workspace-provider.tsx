@@ -37,12 +37,10 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       const session = await authClient.getSession();
       const activeOrgId = session.data?.session?.activeOrganizationId;
 
-      console.log("[WorkspaceProvider] Session activeOrgId:", activeOrgId);
 
       if (activeOrgId) {
         setWorkspaceId(activeOrgId);
         setWorkspaceIdState(activeOrgId);
-        console.log("[WorkspaceProvider] Workspace synced:", activeOrgId);
       } else {
         // Try to get first organization and set it as active
         const orgsResult = await authClient.organization.list();
@@ -54,11 +52,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
         if (orgsData.length > 0) {
           const firstOrg = orgsData[0];
-          console.log("[WorkspaceProvider] Setting first org as active:", firstOrg.id);
           await authClient.organization.setActive({ organizationId: firstOrg.id });
           setWorkspaceId(firstOrg.id);
           setWorkspaceIdState(firstOrg.id);
-          console.log("[WorkspaceProvider] First org set:", firstOrg.id);
         } else {
           console.log("[WorkspaceProvider] No organizations found");
         }
@@ -71,7 +67,6 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   };
 
   const updateWorkspaceId = useCallback((id: string) => {
-    console.log("[WorkspaceProvider] Updating workspace to:", id);
     setWorkspaceId(id);
     setWorkspaceIdState(id);
   }, []);

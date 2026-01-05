@@ -60,8 +60,6 @@ async function fetchAPIServer<T>(
   const workspaceIdCookie = cookieStore.get("x-workspace-id");
   const workspaceId = workspaceIdCookie?.value || null;
 
-  console.log("[API Server] Request:", endpoint, "| x-workspace-id:", workspaceId);
-
   try {
     const response = await fetch(url, {
       ...options,

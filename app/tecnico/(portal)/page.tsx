@@ -49,8 +49,6 @@ export default function TecnicoPortalPage() {
         setTecnico(tecnicoData);
         setRoteiros(roteirosData);
         
-        console.log("[Portal Técnico] Técnico:", tecnicoData.nome);
-        console.log("[Portal Técnico] Roteiros encontrados:", roteirosData.length);
       } catch (err) {
         console.error("[Portal Técnico] Erro ao carregar dados:", err);
         setError("Seu usuário não está vinculado a um técnico. Contate o administrador.");

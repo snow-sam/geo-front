@@ -61,7 +61,7 @@ export function RelatorioDetailDialog({
       />
     ));
   };
-  console.log("relatorio", relatorio);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
