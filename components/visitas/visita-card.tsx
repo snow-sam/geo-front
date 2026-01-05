@@ -15,7 +15,7 @@ interface VisitaCardProps {
   visita: Visita;
   onDelete: (id: string) => void;
   onChangeDate: (id: string) => void;
-  onChangeStatus: (id: string, status: "pendente" | "no_roteiro" | "realizada") => void;
+  onChangeStatus: (id: string, status: "pendente" | "no_roteiro" | "realizado") => void;
   onChangeTecnico?: (id: string) => void;
 }
 
@@ -35,7 +35,7 @@ export function VisitaCard({ visita, onDelete, onChangeDate, onChangeStatus, onC
 
   const getStatusBadge = () => {
     switch (visita.status) {
-      case "realizada":
+      case "realizado":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
             <CheckCircle className="h-3 w-3" />
@@ -73,7 +73,7 @@ export function VisitaCard({ visita, onDelete, onChangeDate, onChangeStatus, onC
             <User className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {visita.cliente.nome}
+                {visita.cliente?.nome ?? "Cliente não informado"}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Cliente</p>
             </div>
@@ -84,7 +84,7 @@ export function VisitaCard({ visita, onDelete, onChangeDate, onChangeStatus, onC
             <Wrench className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {visita.tecnico.nome}
+                {visita.tecnico?.nome ?? "Técnico não informado"}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Técnico</p>
             </div>
@@ -150,7 +150,7 @@ export function VisitaCard({ visita, onDelete, onChangeDate, onChangeStatus, onC
                     <Button
                       variant="outline"
                       className="w-full justify-start"
-                      onClick={() => onChangeStatus(visita.id, "realizada")}
+                      onClick={() => onChangeStatus(visita.id, "realizado")}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Marcar como Realizada

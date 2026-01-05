@@ -27,7 +27,7 @@ export function generateRelatorioPdf(relatorio: RelatorioVisita): void {
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text(`Data: ${formatDate(relatorio.visita?.dataAgendamento)}`, pageWidth / 2, 30, { align: "center" });
+  doc.text(`Data: ${formatDate(relatorio.visita?.dataAgendamento ?? "")}`, pageWidth / 2, 30, { align: "center" });
 
   // Informações do Cliente
   let yPosition = 55;
@@ -43,9 +43,9 @@ export function generateRelatorioPdf(relatorio: RelatorioVisita): void {
     startY: yPosition,
     head: [],
     body: [
-      ["Cliente", relatorio.visita?.cliente?.nome],
-      ["Endereço", relatorio.visita?.cliente?.endereco],
-      ["Data da Visita", formatDate(relatorio.visita?.dataAgendamento)],
+      ["Cliente", relatorio.visita?.cliente?.nome ?? ""],
+      ["Endereço", relatorio.visita?.cliente?.endereco ?? ""],
+      ["Data da Visita", formatDate(relatorio.visita?.dataAgendamento ?? "")],
       ["Horário", `${formatTime(relatorio.horarioInicio)}${relatorio.horarioFim ? ` - ${formatTime(relatorio.horarioFim)}` : ""}`],
     ],
     theme: "grid",
@@ -61,7 +61,7 @@ export function generateRelatorioPdf(relatorio: RelatorioVisita): void {
   });
 
   // Descrição Geral
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
+  yPosition = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -107,7 +107,7 @@ export function generateRelatorioPdf(relatorio: RelatorioVisita): void {
   });
 
   // Assinatura
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
+  yPosition = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -120,7 +120,7 @@ export function generateRelatorioPdf(relatorio: RelatorioVisita): void {
     try {
       doc.addImage(relatorio.assinaturaCliente, "PNG", 14, yPosition, 80, 40);
       yPosition += 45;
-    } catch (e) {
+    } catch {
       doc.setFontSize(10);
       doc.setFont("helvetica", "italic");
       doc.text("Assinatura não disponível", 14, yPosition + 10);
@@ -147,7 +147,7 @@ export function generateRelatorioPdf(relatorio: RelatorioVisita): void {
   );
 
   // Salvar PDF
-  const fileName = `relatorio-visita-${relatorio.visita.cliente.nome.replace(/\s+/g, "-").toLowerCase()}-${relatorio.visita.dataAgendamento}.pdf`;
+  const fileName = `relatorio-visita-${relatorio.visita?.cliente?.nome?.replace(/\s+/g, "-").toLowerCase() ?? ""}-${relatorio.visita?.dataAgendamento ?? ""}.pdf`;
   doc.save(fileName);
 }
 
@@ -182,8 +182,8 @@ export function generateRelatoriosBatchPdf(relatorios: RelatorioVisita[]): void 
     startY: 45,
     head: [["Cliente", "Data", "Horário", "Avaliação", "Descrição"]],
     body: relatorios.map((r) => [
-      r.visita?.cliente?.nome,
-      formatDate(r.visita?.dataAgendamento),
+      r.visita?.cliente?.nome ?? "",
+      formatDate(r.visita?.dataAgendamento ?? ""),
       formatTime(r.horarioInicio),
       `${r.avaliacao}/5`,
       r.descricaoGeral.length > 50 ? `${r.descricaoGeral.substring(0, 50)}...` : r.descricaoGeral,

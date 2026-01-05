@@ -1,8 +1,11 @@
 import { TecnicosList } from "@/components/tecnicos/tecnicos-list";
 import { getTecnicosServer } from "@/lib/api-server";
+import type { Tecnico } from "@/types/tecnico";
+
+export const dynamic = "force-dynamic";
 
 export default async function TecnicosPage() {
-  let tecnicos = [];
+  let tecnicos: Tecnico[] = [];
   
   try {
     const response = await getTecnicosServer({ limit: 100 });

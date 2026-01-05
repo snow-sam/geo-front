@@ -58,6 +58,7 @@ export function SolicitacaoForm({ onSuccess }: SolicitacaoFormProps) {
     setIsLoading(true);
     try {
       // Remove as imagens temporariamente para evitar "request entity too large"
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { fotoEquipamento, fotoVideoProblema, ...dadosSemImagens } = values;
       await createSolicitacao({
         ...dadosSemImagens,
@@ -210,7 +211,7 @@ export function SolicitacaoForm({ onSuccess }: SolicitacaoFormProps) {
                   </FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={(value) => field.onChange(value === "sim")}
+                      onValueChange={(value: string) => field.onChange(value === "sim")}
                       value={field.value ? "sim" : "nao"}
                       className="flex gap-6"
                       disabled={isLoading}

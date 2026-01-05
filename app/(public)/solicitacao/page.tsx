@@ -9,7 +9,7 @@ export const metadata = {
 export default function SolicitacaoPage() {
   return (
     <>
-      <GoogleMapsScript />
+      <GoogleMapsScript apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""} />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
         <div className="container mx-auto px-4 py-8 md:py-12">
           {/* Header */}

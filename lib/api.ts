@@ -85,7 +85,7 @@ async function fetchAPI<T>(
 /**
  * Função auxiliar para construir query strings
  */
-function buildQueryString(params: Record<string, any>): string {
+function buildQueryString(params: Record<string, unknown>): string {
   const query = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
@@ -112,18 +112,16 @@ export interface GetClientesParams {
 
 export interface PaginatedResponse<T> {
   data: T[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  count: number;
+  pageCount: number;
+  page: number;
+  total: number;
 }
 
 export async function getClientes(
   params: GetClientesParams = {}
 ): Promise<PaginatedResponse<Cliente>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPI<PaginatedResponse<Cliente>>(`/clientes${queryString}`);
 }
 
@@ -225,7 +223,7 @@ export interface GetTecnicosParams {
 export async function getTecnicos(
   params: GetTecnicosParams = {}
 ): Promise<PaginatedResponse<Tecnico>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPI<PaginatedResponse<Tecnico>>(`/tecnicos${queryString}`);
 }
 
@@ -407,7 +405,7 @@ export interface GetVisitasStatsParams {
 export async function getVisitasStats(
   params: GetVisitasStatsParams = {}
 ): Promise<VisitaStats> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPI<VisitaStats>(`/visitas/stats${queryString}`);
 }
 
@@ -442,7 +440,7 @@ export interface GetChamadosParams {
 export async function getChamados(
   params: GetChamadosParams = {}
 ): Promise<PaginatedResponse<Chamado>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPI<PaginatedResponse<Chamado>>(`/chamados${queryString}`);
 }
 
@@ -458,7 +456,7 @@ export interface GetChamadosStatsParams {
 export async function getChamadosStats(
   params: GetChamadosStatsParams = {}
 ): Promise<ChamadoStats> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPI<ChamadoStats>(`/chamados/stats${queryString}`);
 }
 

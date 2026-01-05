@@ -102,7 +102,7 @@ export interface GetClientesParams {
 export async function getClientesServer(
   params: GetClientesParams = {}
 ): Promise<PaginatedResponse<Cliente>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPIServer<PaginatedResponse<Cliente>>(`/clientes${queryString}`);
 }
 
@@ -120,7 +120,7 @@ export interface GetTecnicosParams {
 export async function getTecnicosServer(
   params: GetTecnicosParams = {}
 ): Promise<PaginatedResponse<Tecnico>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPIServer<PaginatedResponse<Tecnico>>(`/tecnicos${queryString}`);
 }
 
@@ -141,7 +141,7 @@ export interface GetChamadosParams {
 export async function getChamadosServer(
   params: GetChamadosParams = {}
 ): Promise<PaginatedResponse<Chamado>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPIServer<PaginatedResponse<Chamado>>(`/chamados${queryString}`);
 }
 
@@ -208,7 +208,7 @@ export interface GetVisitasStatsParams {
 export async function getVisitasStatsServer(
   params: GetVisitasStatsParams = {}
 ): Promise<VisitaStats> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString(params as Record<string, unknown>);
   return fetchAPIServer<VisitaStats>(`/visitas/stats${queryString}`);
 }
 

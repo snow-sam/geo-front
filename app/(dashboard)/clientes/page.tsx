@@ -1,8 +1,11 @@
 import { ClientesList } from "@/components/clientes/clientes-list";
 import { getClientesServer } from "@/lib/api-server";
+import type { Cliente } from "@/types/cliente";
+
+export const dynamic = "force-dynamic";
 
 export default async function ClientesPage() {
-  let clientes = [];
+  let clientes: Cliente[] = [];
   
   try {
     const response = await getClientesServer({ limit: 100 });

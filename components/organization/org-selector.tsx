@@ -37,11 +37,21 @@ export function OrgSelector() {
       const orgsResult = await authClient.organization.list();
       
       // Handle both array and object with organizations property
-      const orgsData = orgsResult.data 
-        ? (Array.isArray(orgsResult.data) 
-            ? orgsResult.data 
-            : (orgsResult.data as unknown as Organization[]))
+      const rawOrgs = orgsResult.data 
+        ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
         : [];
+      
+      // Convert Date to string for createdAt
+      const orgsData: Organization[] = rawOrgs.map((org) => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        logo: org.logo,
+        metadata: org.metadata as Record<string, unknown> | undefined,
+        createdAt: org.createdAt instanceof Date 
+          ? org.createdAt.toISOString() 
+          : String(org.createdAt),
+      }));
       
       setOrganizations(orgsData);
 

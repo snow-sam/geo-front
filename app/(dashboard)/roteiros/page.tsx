@@ -1,8 +1,11 @@
 import { RoteirosList } from "@/components/roteiros/roteiros-list";
 import { getRoteirosServer } from "@/lib/api-server";
+import type { Roteiro } from "@/types/roteiro";
+
+export const dynamic = "force-dynamic";
 
 export default async function RoteirosPage() {
-  let roteiros = [];
+  let roteiros: Roteiro[] = [];
   
   try {
     const response = await getRoteirosServer({ limit: 100 });

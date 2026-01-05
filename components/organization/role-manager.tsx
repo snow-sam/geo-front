@@ -58,7 +58,7 @@ export function RoleManager({ member, open, onClose, onUpdate }: RoleManagerProp
 
     try {
       await authClient.organization.updateMemberRole({
-        memberIdOrEmail: member.userId,
+        memberId: member.id,
         role: selectedRole,
       });
       onUpdate();
@@ -92,7 +92,7 @@ export function RoleManager({ member, open, onClose, onUpdate }: RoleManagerProp
             <Label>Role</Label>
             <Select
               value={selectedRole}
-              onValueChange={(value) => setSelectedRole(value as OrganizationRole)}
+              onValueChange={(value: string) => setSelectedRole(value as OrganizationRole)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma role" />

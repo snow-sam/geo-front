@@ -1,9 +1,12 @@
 import { VisitasList } from "@/components/visitas/visitas-list";
 import { getVisitasServer } from "@/lib/api-server";
+import type { Visita } from "@/types/visita";
+
+export const dynamic = "force-dynamic";
 
 export default async function VisitasPage() {
-  let visitas = [];
-  let stats = { realizadas: 0, pendentes: 0, noRoteiro: 0 };
+  let visitas: Visita[] = [];
+  const stats = { realizadas: 0, pendentes: 0, noRoteiro: 0 };
   
   try {
     const visitasResponse = await getVisitasServer({ limit: 100 });

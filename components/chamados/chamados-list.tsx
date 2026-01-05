@@ -5,7 +5,6 @@ import { Search, Plus, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChamadoCard } from "@/components/chamados/chamado-card";
-import { ChamadosStats } from "@/components/chamados/chamados-stats";
 import type { Chamado, ChamadoFilters, ChamadoStats, StatusChamado } from "@/types/chamado";
 import {
   Sheet,
@@ -47,6 +46,7 @@ interface ChamadosListProps {
   initialStats: ChamadoStats;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ChamadosList({ initialChamados, initialStats }: ChamadosListProps) {
   const [chamados] = useState<Chamado[]>(initialChamados);
   const [searchTerm, setSearchTerm] = useState("");

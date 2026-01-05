@@ -141,7 +141,7 @@ export function RoteiroMap({ roteiro, tecnicoLocation }: RoteiroMapProps) {
         };
 
         // Criar mapa com mapId para suporte a AdvancedMarkerElement
-        if (!mapInstance.current) {
+        if (!mapInstance.current && mapRef.current) {
           mapInstance.current = new google.maps.Map(mapRef.current, {
             center,
             zoom: 12,
@@ -283,12 +283,12 @@ export function RoteiroMap({ roteiro, tecnicoLocation }: RoteiroMapProps) {
                 lng: v.cliente!.longitude!,
               });
             });
-            mapInstance.current.fitBounds(bounds);
+            mapInstance.current?.fitBounds(bounds);
           }
         } else {
           // Apenas uma visita, centralizar nela
-          mapInstance.current.setCenter(center);
-          mapInstance.current.setZoom(15);
+          mapInstance.current?.setCenter(center);
+          mapInstance.current?.setZoom(15);
         }
 
         setIsLoading(false);

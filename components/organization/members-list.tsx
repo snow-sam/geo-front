@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RoleManager } from "./role-manager";
-import type { OrganizationMember, OrganizationRole, roleLabels, roleColors } from "@/types/organization";
+import type { OrganizationMember, OrganizationRole } from "@/types/organization";
 
 interface MembersListProps {
   members: OrganizationMember[];
@@ -61,7 +61,6 @@ export function MembersList({
   currentUserRole,
   onUpdate,
 }: MembersListProps) {
-  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<OrganizationMember | null>(null);
   const [memberToEditRole, setMemberToEditRole] = useState<OrganizationMember | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);

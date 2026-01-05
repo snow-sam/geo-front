@@ -7,7 +7,6 @@ import { gerarVisitasDoMes, updateVisita } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { VisitaCard } from "@/components/visitas/visita-card";
-import { VisitasStats } from "@/components/visitas/visitas-stats";
 import { TecnicoSelectDialog } from "@/components/visitas/tecnico-select-dialog";
 import { DataSelectDialog } from "@/components/visitas/data-select-dialog";
 import type { Visita, VisitaFilters, VisitaStats, StatusVisita } from "@/types/visita";
@@ -48,6 +47,7 @@ interface VisitasListProps {
   initialStats: VisitaStats;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) {
   const router = useRouter();
   const [visitas, setVisitas] = useState<Visita[]>(initialVisitas);
@@ -63,7 +63,7 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
   const [selectedVisitaId, setSelectedVisitaId] = useState<string | null>(null);
   const [isTecnicoDialogOpen, setIsTecnicoDialogOpen] = useState(false);
   const [isDataDialogOpen, setIsDataDialogOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [, setIsUpdating] = useState(false);
   const filteredVisitas = useMemo(() => {
     return visitas.filter((visita) => {
       // Filtro de busca por texto
@@ -288,10 +288,10 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
                     </Button>
                     <Button
                       variant={
-                        filters.status === "realizada" ? "default" : "outline"
+                        filters.status === "realizado" ? "default" : "outline"
                       }
                       size="sm"
-                      onClick={() => handleFilterChange("status", "realizada")}
+                      onClick={() => handleFilterChange("status", "realizado")}
                     >
                       Realizadas
                     </Button>

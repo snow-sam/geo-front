@@ -21,7 +21,6 @@ import {
   Download,
 } from "lucide-react";
 import type { RelatorioVisita } from "@/types/relatorio";
-import Image from "next/image";
 
 interface RelatorioDetailDialogProps {
   isOpen: boolean;
@@ -87,14 +86,14 @@ export function RelatorioDetailDialog({
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Cliente:</span>
                 <p className="font-medium text-slate-900 dark:text-white">
-                  {relatorio.visita.cliente.nome}
+                  {relatorio.visita?.cliente?.nome ?? "Cliente não informado"}
                 </p>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Data:</span>
                 <p className="font-medium text-slate-900 dark:text-white flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {formatDate(relatorio.visita.dataAgendamento)}
+                  {formatDate(relatorio.visita?.dataAgendamento ?? "")}
                 </p>
               </div>
             </div>
@@ -103,7 +102,7 @@ export function RelatorioDetailDialog({
               <span className="text-sm text-slate-500 dark:text-slate-400">Endereço:</span>
               <p className="font-medium text-slate-900 dark:text-white flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
-                {relatorio.visita.cliente.endereco}
+                {relatorio.visita?.cliente?.endereco ?? "Endereço não informado"}
               </p>
             </div>
           </div>

@@ -33,13 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Invitation, OrganizationRole } from "@/types/organization";
+import type { Invitation } from "@/types/organization";
 
 const inviteSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
-  role: z.enum(["admin", "member"], {
-    required_error: "Selecione uma role",
-  }),
+  role: z.enum(["admin", "member"], { message: "Selecione uma role" }),
 });
 
 type InviteFormValues = z.infer<typeof inviteSchema>;
@@ -53,20 +51,6 @@ interface InviteFormProps {
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
   member: "Membro",
-};
-
-const statusLabels: Record<string, string> = {
-  pending: "Pendente",
-  accepted: "Aceito",
-  rejected: "Recusado",
-  canceled: "Cancelado",
-};
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500",
-  accepted: "bg-green-500",
-  rejected: "bg-red-500",
-  canceled: "bg-gray-500",
 };
 
 export function InviteForm({ invitations, canInvite, onUpdate }: InviteFormProps) {

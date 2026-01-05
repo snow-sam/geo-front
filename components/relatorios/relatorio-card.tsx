@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  User,
   MapPin,
   Calendar,
   Clock,
@@ -66,13 +65,13 @@ export function RelatorioCard({
             </div>
             <div>
               <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
-                {relatorio.visita.cliente.nome}
+                {relatorio.visita?.cliente?.nome ?? "Cliente não informado"}
               </CardTitle>
               <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                 <MapPin className="h-3 w-3" />
-                {relatorio.visita.cliente.endereco.length > 40
-                  ? `${relatorio.visita.cliente.endereco.substring(0, 40)}...`
-                  : relatorio.visita.cliente.endereco}
+                {(relatorio.visita?.cliente?.endereco?.length ?? 0) > 40
+                  ? `${relatorio.visita?.cliente?.endereco?.substring(0, 40)}...`
+                  : relatorio.visita?.cliente?.endereco ?? "Endereço não informado"}
               </p>
             </div>
           </div>
@@ -89,7 +88,7 @@ export function RelatorioCard({
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
             <Calendar className="h-4 w-4 text-slate-400" />
-            <span>{formatDate(relatorio.visita.dataAgendamento)}</span>
+            <span>{formatDate(relatorio.visita?.dataAgendamento ?? "")}</span>
           </div>
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
             <Clock className="h-4 w-4 text-slate-400" />

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Building2, Users, UserPlus, Settings, Loader2, Plus } from "lucide-react";
 import { authClient } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,14 @@ import { InviteForm } from "@/components/organization/invite-form";
 import type { Organization, OrganizationMember, Invitation, OrganizationRole } from "@/types/organization";
 
 export default function OrganizacaoPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+      <OrganizacaoContent />
+    </Suspense>
+  );
+}
+
+function OrganizacaoContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const showCreateModal = searchParams.get("criar") === "true";
@@ -71,21 +79,50 @@ export default function OrganizacaoPage() {
       // Get organization details
       const orgResult = await authClient.organization.getFullOrganization();
       if (orgResult.data) {
-        setOrganization(orgResult.data as Organization);
+        const orgData = orgResult.data;
+        setOrganization({
+          id: orgData.id,
+          name: orgData.name,
+          slug: orgData.slug,
+          logo: orgData.logo,
+          metadata: orgData.metadata as Record<string, unknown> | undefined,
+          createdAt: orgData.createdAt instanceof Date 
+            ? orgData.createdAt.toISOString() 
+            : String(orgData.createdAt),
+        });
         
         // Get members
         const membersResult = await authClient.organization.listMembers();
         if (membersResult.data) {
           // Handle both array and object with members property
-          const membersData = Array.isArray(membersResult.data) 
+          const rawMembers = Array.isArray(membersResult.data) 
             ? membersResult.data 
-            : (membersResult.data as { members?: OrganizationMember[] }).members || [];
+            : (membersResult.data as { members?: unknown[] }).members || [];
           
-          setMembers(membersData as OrganizationMember[]);
+          // Convert Date to string for createdAt
+          const membersData: OrganizationMember[] = rawMembers.map((m: unknown) => {
+            const member = m as { 
+              id: string; 
+              organizationId: string; 
+              userId: string; 
+              role: string; 
+              createdAt: Date | string; 
+              user: { id: string; name: string; email: string; image?: string | null } 
+            };
+            return {
+              ...member,
+              role: member.role as OrganizationMember["role"],
+              createdAt: member.createdAt instanceof Date 
+                ? member.createdAt.toISOString() 
+                : String(member.createdAt),
+            };
+          });
+          
+          setMembers(membersData);
           
           // Find current user's role
           const currentMember = membersData.find(
-            (m: OrganizationMember) => m.userId === session.data?.user?.id
+            (m) => m.userId === session.data?.user?.id
           );
           if (currentMember) {
             setCurrentUserRole(currentMember.role as OrganizationRole);
@@ -96,7 +133,18 @@ export default function OrganizacaoPage() {
         try {
           const invitationsResult = await authClient.organization.listInvitations();
           if (invitationsResult.data) {
-            setInvitations(invitationsResult.data as Invitation[]);
+            const invitationsData: Invitation[] = invitationsResult.data.map((inv) => ({
+              id: inv.id,
+              organizationId: inv.organizationId,
+              email: inv.email,
+              role: inv.role as Invitation["role"],
+              status: inv.status as Invitation["status"],
+              inviterId: inv.inviterId,
+              expiresAt: inv.expiresAt instanceof Date 
+                ? inv.expiresAt.toISOString() 
+                : String(inv.expiresAt),
+            }));
+            setInvitations(invitationsData);
           }
         } catch {
           // Invitations might not be available

@@ -19,7 +19,6 @@ import {
   Calendar,
   Star,
   Download,
-  Loader2,
   AlertCircle,
   FileX,
   Filter,
@@ -53,7 +52,7 @@ export function RelatoriosList() {
     setIsLoading(true);
     setError(null);
     try {
-      const params: any = { page, limit };
+      const params: Record<string, string | number> = { page, limit };
       if (searchTerm) params.clienteNome = searchTerm;
       if (dataInicio) params.dataInicio = dataInicio;
       if (dataFim) params.dataFim = dataFim;
@@ -227,7 +226,7 @@ export function RelatoriosList() {
                 </label>
                 <Select
                   value={avaliacaoFilter}
-                  onValueChange={(value) => {
+                  onValueChange={(value: string) => {
                     setAvaliacaoFilter(value);
                     setPage(1);
                   }}

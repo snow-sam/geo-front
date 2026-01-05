@@ -40,9 +40,6 @@ export function PlacesAutocomplete({
     if (hasChecked.current || isLoaded) return;
     hasChecked.current = true;
 
-    let timeoutId: NodeJS.Timeout;
-    let intervalId: NodeJS.Timeout;
-
     // Verificar se o Google Maps já está carregado
     const checkGoogleMapsLoaded = () => {
       if (typeof google !== "undefined" && google.maps && google.maps.places) {
@@ -59,7 +56,7 @@ export function PlacesAutocomplete({
     }
 
     // Se não estiver carregado, verificar periodicamente a cada 300ms
-    intervalId = setInterval(() => {
+    const intervalId = setInterval(() => {
       if (checkGoogleMapsLoaded()) {
         clearInterval(intervalId);
       }
@@ -75,7 +72,7 @@ export function PlacesAutocomplete({
     window.addEventListener("google-maps-loaded", handleLoaded);
 
     // Timeout de 10 segundos para detectar falha no carregamento
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       const stillChecking = !checkGoogleMapsLoaded();
       if (stillChecking) {
         console.warn("Google Maps não carregou após 10 segundos. Verifique a API Key.");

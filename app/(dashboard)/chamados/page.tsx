@@ -1,8 +1,11 @@
 import { ChamadosList } from "@/components/chamados/chamados-list";
 import { getChamadosServer } from "@/lib/api-server";
+import type { Chamado } from "@/types/chamado";
+
+export const dynamic = "force-dynamic";
 
 export default async function ChamadosPage() {
-  let chamados = [];
+  let chamados: Chamado[] = [];
   // TODO: implementar endpoint /chamados/stats no backend
   const stats = { abertos: 0, emAndamento: 0, fechados: 0 };
   
