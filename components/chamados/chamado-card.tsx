@@ -20,15 +20,28 @@ interface ChamadoCardProps {
 
 export function ChamadoCard({ chamado, onDelete, onEdit, onChangeStatus }: ChamadoCardProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("pt-BR", {
+    // Extrai apenas a parte da data (YYYY-MM-DD) para evitar problemas de timezone
+    const datePart = dateString.split("T")[0];
+    const [year, month, day] = datePart.split("-").map(Number);
+    // Cria a data usando o horário local (meio-dia para evitar problemas)
+    const date = new Date(year, month - 1, day, 12, 0, 0);
+    
+    // Se a string original tiver hora, extrai e formata
+    if (dateString.includes("T") && dateString.length > 10) {
+      const timePart = dateString.split("T")[1];
+      const [hours, minutes] = timePart.split(":").map(Number);
+      return `${date.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+    
+    return date.toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "America/Sao_Paulo",
-    }).format(date);
+    });
   };
 
   const getStatusBadge = () => {

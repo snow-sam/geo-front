@@ -1,11 +1,11 @@
 import { RoteirosList } from "@/components/roteiros/roteiros-list";
-import { getRoteiros } from "@/lib/api";
+import { getRoteirosServer } from "@/lib/api-server";
 
 export default async function RoteirosPage() {
   let roteiros = [];
   
   try {
-    const response = await getRoteiros({ limit: 100 });
+    const response = await getRoteirosServer({ limit: 100 });
     roteiros = response.data;
   } catch (error) {
     console.error("Erro ao carregar roteiros:", error);
@@ -24,4 +24,5 @@ export default async function RoteirosPage() {
     </div>
   );
 }
+
 

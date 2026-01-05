@@ -1,11 +1,11 @@
 import { ClientesList } from "@/components/clientes/clientes-list";
-import { getClientes } from "@/lib/api";
+import { getClientesServer } from "@/lib/api-server";
 
 export default async function ClientesPage() {
   let clientes = [];
   
   try {
-    const response = await getClientes({ limit: 100 });
+    const response = await getClientesServer({ limit: 100 });
     clientes = response.data;
   } catch (error) {
     console.error("Erro ao carregar clientes:", error);
@@ -23,4 +23,5 @@ export default async function ClientesPage() {
     </div>
   );
 }
+
 

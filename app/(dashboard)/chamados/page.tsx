@@ -1,17 +1,14 @@
 import { ChamadosList } from "@/components/chamados/chamados-list";
-import { getChamados, getChamadosStats } from "@/lib/api";
+import { getChamadosServer } from "@/lib/api-server";
 
 export default async function ChamadosPage() {
   let chamados = [];
-  let stats = { abertos: 0, emAndamento: 0, fechados: 0 };
+  // TODO: implementar endpoint /chamados/stats no backend
+  const stats = { abertos: 0, emAndamento: 0, fechados: 0 };
   
   try {
-    const [chamadosResponse, statsResponse] = await Promise.all([
-      getChamados({ limit: 100 }),
-      getChamadosStats(),
-    ]);
+    const chamadosResponse = await getChamadosServer({ limit: 100 });
     chamados = chamadosResponse.data;
-    stats = statsResponse;
   } catch (error) {
     console.error("Erro ao carregar chamados:", error);
   }
@@ -28,4 +25,5 @@ export default async function ChamadosPage() {
     </div>
   );
 }
+
 

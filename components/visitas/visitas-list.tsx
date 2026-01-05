@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, Filter, X } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Plus, Filter, X, Calendar } from "lucide-react";
+import { gerarVisitasDoMes, updateVisita } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { VisitaCard } from "@/components/visitas/visita-card";
 import { VisitasStats } from "@/components/visitas/visitas-stats";
+import { TecnicoSelectDialog } from "@/components/visitas/tecnico-select-dialog";
+import { DataSelectDialog } from "@/components/visitas/data-select-dialog";
 import type { Visita, VisitaFilters, VisitaStats, StatusVisita } from "@/types/visita";
 import {
   Sheet,
@@ -45,7 +49,8 @@ interface VisitasListProps {
 }
 
 export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) {
-  const [visitas] = useState<Visita[]>(initialVisitas);
+  const router = useRouter();
+  const [visitas, setVisitas] = useState<Visita[]>(initialVisitas);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<VisitaFilters>({
@@ -54,14 +59,19 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
     dataFim: getBrasiliaDateEnd(),
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedVisitaId, setSelectedVisitaId] = useState<string | null>(null);
+  const [isTecnicoDialogOpen, setIsTecnicoDialogOpen] = useState(false);
+  const [isDataDialogOpen, setIsDataDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  console.log(visitas)
   const filteredVisitas = useMemo(() => {
     return visitas.filter((visita) => {
       // Filtro de busca por texto
       const matchesSearch =
         searchTerm === "" ||
-        visita.clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        visita.tecnicoNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        visita.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        visita.tecnico.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         visita.observacoes?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Filtro de status
@@ -71,7 +81,7 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
       // Filtro de data
       let matchesDate = true;
       if (filters.dataInicio || filters.dataFim) {
-        const visitaDate = new Date(visita.dataMarcada);
+        const visitaDate = new Date(visita.dataAgendamento);
         if (filters.dataInicio) {
           const dataInicio = new Date(filters.dataInicio);
           matchesDate = matchesDate && visitaDate >= dataInicio;
@@ -80,8 +90,10 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
           const dataFim = new Date(filters.dataFim);
           matchesDate = matchesDate && visitaDate <= dataFim;
         }
+        console.log(filters)
       }
-
+      matchesDate = true;
+      // console.log(matchesSearch, matchesStatus, matchesDate)
       return matchesSearch && matchesStatus && matchesDate;
     });
   }, [visitas, searchTerm, filters]);
@@ -123,14 +135,104 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
     console.log("Deletar visita:", id);
   };
 
-  const handleEdit = (id: string) => {
-    // TODO: Implementar integração com API para edição
-    console.log("Editar visita:", id);
+  const handleChangeDate = (id: string) => {
+    setSelectedVisitaId(id);
+    setIsDataDialogOpen(true);
   };
 
-  const handleChangeStatus = (id: string, status: StatusVisita) => {
-    // TODO: Implementar integração com API para mudar status
-    console.log("Mudar status da visita:", id, "para", status);
+  const handleDateSelect = async (newDate: string) => {
+    if (!selectedVisitaId) return;
+
+    setIsUpdating(true);
+    try {
+      const updatedVisita = await updateVisita(selectedVisitaId, { dataAgendamento: newDate });
+      
+      // Atualiza a visita na lista local
+      setVisitas((prev) =>
+        prev.map((v) => (v.id === selectedVisitaId ? updatedVisita : v))
+      );
+
+      // Fecha o dialog
+      setIsDataDialogOpen(false);
+      setSelectedVisitaId(null);
+      
+      // Recarrega para garantir dados atualizados
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao alterar data:", error);
+      alert(error instanceof Error ? error.message : "Ocorreu um erro ao alterar a data.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleChangeStatus = async (id: string, status: StatusVisita) => {
+    try {
+      const updatedVisita = await updateVisita(id, { status });
+      
+      // Atualiza a visita na lista local
+      setVisitas((prev) =>
+        prev.map((v) => (v.id === id ? updatedVisita : v))
+      );
+      
+      // Recarrega para garantir dados atualizados
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao alterar status:", error);
+      alert(error instanceof Error ? error.message : "Ocorreu um erro ao alterar o status.");
+    }
+  };
+
+  const handleChangeTecnico = (id: string) => {
+    setSelectedVisitaId(id);
+    setIsTecnicoDialogOpen(true);
+  };
+
+  const handleTecnicoSelect = async (tecnicoId: string) => {
+    if (!selectedVisitaId) return;
+
+    setIsUpdating(true);
+    try {
+      const updatedVisita = await updateVisita(selectedVisitaId, { tecnicoId });
+      
+      // Atualiza a visita na lista local
+      setVisitas((prev) =>
+        prev.map((v) => (v.id === selectedVisitaId ? updatedVisita : v))
+      );
+
+      // Fecha o dialog
+      setIsTecnicoDialogOpen(false);
+      setSelectedVisitaId(null);
+      
+      // Recarrega para garantir dados atualizados
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao alterar técnico:", error);
+      alert(error instanceof Error ? error.message : "Ocorreu um erro ao alterar o técnico.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Encontra a visita selecionada para passar o tecnicoId atual
+  const selectedVisita = visitas.find((v) => v.id === selectedVisitaId);
+
+  const handleGerarVisitas = async () => {
+    setIsGenerating(true);
+    try {
+      // Formata a data de hoje em YYYY-MM-DD
+      const hoje = new Date();
+      const dataFormatada = hoje.toISOString().split("T")[0];
+      
+      await gerarVisitasDoMes(dataFormatada, true);
+      
+      // Recarrega as visitas
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao gerar visitas:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const formatDateForInput = (dateString: string | null) => {
@@ -142,7 +244,7 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
   return (
     <div className="space-y-6">
       {/* Estatísticas */}
-      <VisitasStats stats={initialStats} />
+      {/* <VisitasStats stats={initialStats} /> */}
 
       {/* Barra de ações */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -344,6 +446,10 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
             </SheetContent>
           </Sheet>
 
+          <Button onClick={handleGerarVisitas} disabled={isGenerating}>
+            <Calendar className="mr-2 h-4 w-4" />
+            {isGenerating ? "Gerando..." : "Gerar Visitas"}
+          </Button>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Nova Visita
@@ -377,14 +483,15 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
           ) : null}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-3">
           {currentVisitas.map((visita) => (
             <VisitaCard
               key={visita.id}
               visita={visita}
               onDelete={handleDelete}
-              onEdit={handleEdit}
+              onChangeDate={handleChangeDate}
               onChangeStatus={handleChangeStatus}
+              onChangeTecnico={handleChangeTecnico}
             />
           ))}
         </div>
@@ -426,6 +533,22 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
           </Button>
         </div>
       )}
+
+      {/* Dialog de Seleção de Técnico */}
+      <TecnicoSelectDialog
+        open={isTecnicoDialogOpen}
+        onOpenChange={setIsTecnicoDialogOpen}
+        currentTecnicoId={selectedVisita?.tecnicoId || ""}
+        onSelect={handleTecnicoSelect}
+      />
+
+      {/* Dialog de Seleção de Data */}
+      <DataSelectDialog
+        open={isDataDialogOpen}
+        onOpenChange={setIsDataDialogOpen}
+        currentDate={selectedVisita?.dataAgendamento || ""}
+        onSelect={handleDateSelect}
+      />
     </div>
   );
 }

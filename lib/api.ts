@@ -3,26 +3,74 @@ import type { Tecnico } from "@/types/tecnico";
 import type { Visita, VisitaStats } from "@/types/visita";
 import type { Chamado, ChamadoStats } from "@/types/chamado";
 import type { Roteiro } from "@/types/roteiro";
+import type { Solicitacao, SolicitacaoFormValues } from "@/types/solicitacao";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+
+/**
+ * Obtém o workspace ID do localStorage (preferencial) ou cookie
+ */
+function getWorkspaceId(): string | null {
+  if (typeof window === "undefined") return null;
+  
+  // Primeiro tenta localStorage (mais atualizado)
+  const fromStorage = localStorage.getItem("activeWorkspaceId");
+  if (fromStorage) return fromStorage;
+  
+  // Fallback para cookie
+  const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
+  return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+}
+
+/**
+ * Define o workspace ID ativo no localStorage e cookie (para SSR)
+ */
+export function setWorkspaceId(workspaceId: string | null): void {
+  if (typeof window === "undefined") return;
+
+  if (workspaceId) {
+    // Salvar no localStorage para client-side
+    localStorage.setItem("activeWorkspaceId", workspaceId);
+    
+    // Salvar também como cookie para SSR
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 30);
+    document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+    
+    console.log("[API] Workspace ID set:", workspaceId);
+  } else {
+    localStorage.removeItem("activeWorkspaceId");
+    document.cookie = "x-workspace-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    console.log("[API] Workspace ID removed");
+  }
+}
 
 /**
  * Função auxiliar para fazer requisições HTTP
+ * Funciona em Client Components
  */
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
+  const workspaceId = getWorkspaceId();
   
+  if (typeof window !== "undefined") {
+    console.log("[API] Request:", endpoint, "| x-workspace-id:", workspaceId);
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         ...options?.headers,
       },
-      cache: "no-store", // Sempre buscar dados atualizados
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -31,8 +79,9 @@ async function fetchAPI<T>(
       }));
       throw new Error(error.message || `Erro HTTP: ${response.status}`);
     }
-
-    return await response.json();
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    return data;
   } catch (error) {
     console.error(`Erro ao buscar ${endpoint}:`, error);
     throw error;
@@ -44,15 +93,20 @@ async function fetchAPI<T>(
  */
 function buildQueryString(params: Record<string, any>): string {
   const query = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== "") {
+    if (value === null || value === undefined || value === "") return;
+
+    if (Array.isArray(value)) {
+      value.forEach((v) => query.append(key, String(v)));
+    } else {
       query.append(key, String(value));
     }
   });
-  
+  console.log(query.toString())
   return query.toString() ? `?${query.toString()}` : "";
 }
+
 
 // ==================== CLIENTES ====================
 
@@ -95,26 +149,8 @@ export interface CreateClienteData {
   descricao?: string;
 }
 
-/**
- * Transforma dados do frontend (português) para o formato da API (inglês)
- */
-function transformToApiFormat(data: CreateClienteData | UpdateClienteData): any {
-  const transformed: any = {};
-  
-  if ('nome' in data && data.nome !== undefined) transformed.name = data.nome;
-  if ('endereco' in data && data.endereco !== undefined) transformed.address = data.endereco;
-  if ('latitude' in data && data.latitude !== undefined) transformed.latitude = data.latitude;
-  if ('longitude' in data && data.longitude !== undefined) transformed.longitude = data.longitude;
-  if ('placeId' in data && data.placeId !== undefined) transformed.placeId = data.placeId;
-  if ('telefone' in data && data.telefone !== undefined) transformed.phone = data.telefone;
-  if ('email' in data && data.email !== undefined) transformed.email = data.email;
-  if ('descricao' in data && data.descricao !== undefined) transformed.description = data.descricao;
-  
-  return transformed;
-}
-
 export async function createCliente(data: CreateClienteData): Promise<Cliente> {
-  const apiData = transformToApiFormat(data);
+  const apiData = data;
   return fetchAPI<Cliente>(`/clientes`, {
     method: "POST",
     body: JSON.stringify(apiData),
@@ -136,7 +172,7 @@ export async function updateCliente(
   id: string,
   data: UpdateClienteData
 ): Promise<Cliente> {
-  const apiData = transformToApiFormat(data);
+  const apiData = data;
   return fetchAPI<Cliente>(`/clientes/${id}`, {
     method: "PUT",
     body: JSON.stringify(apiData),
@@ -147,6 +183,42 @@ export async function deleteCliente(id: string): Promise<void> {
   return fetchAPI<void>(`/clientes/${id}`, {
     method: "DELETE",
   });
+}
+
+
+/**
+ * Importa clientes a partir de um arquivo Excel
+ * O backend processa o arquivo, busca coordenadas via Google Maps e salva os clientes
+ */
+export async function importClientesExcel(file: File): Promise<Cliente[]> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const url = `${API_URL}/clientes/import`;
+  const workspaceId = getWorkspaceId();
+  
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+      headers: workspaceId ? { "x-workspace-id": workspaceId } : {},
+      // Não definir Content-Type - o browser define automaticamente com boundary para FormData
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Erro desconhecido",
+      }));
+      throw new Error(error.message || `Erro HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Erro ao importar clientes:", error);
+    throw error;
+  }
 }
 
 // ==================== TÉCNICOS ====================
@@ -168,6 +240,145 @@ export async function getTecnico(id: string): Promise<Tecnico> {
   return fetchAPI<Tecnico>(`/tecnicos/${id}`);
 }
 
+/**
+ * Retorna o técnico vinculado ao usuário logado
+ * Endpoint: GET /tecnico/me
+ */
+export async function getTecnicoMe(): Promise<Tecnico> {
+  return fetchAPI<Tecnico>(`/tecnico/me`);
+}
+
+/**
+ * Retorna os roteiros do técnico logado
+ * Endpoint: GET /tecnico/roteiros
+ * Filtro por tecnicoId é automático (pela sessão)
+ * Retorna array direto (sem paginação)
+ */
+export async function getTecnicoRoteiros(): Promise<Roteiro[]> {
+  return fetchAPI<Roteiro[]>(`/tecnico/roteiros`);
+}
+
+/**
+ * Retorna detalhes de um roteiro específico do técnico logado
+ * Endpoint: GET /tecnico/roteiros/:id
+ * Relations já incluídas no backend
+ */
+export async function getTecnicoRoteiro(id: string): Promise<Roteiro> {
+  return fetchAPI<Roteiro>(`/tecnico/roteiros/${id}`);
+}
+
+export interface CreateTecnicoData {
+  nome: string;
+  telefone: string;
+  email: string;
+  endereco: string;
+  latitude: number;
+  longitude: number;
+  placeId?: string;
+  placa?: string;
+  especialidade?: string;
+}
+
+/**
+ * Transforma dados do frontend (português) para o formato da API (inglês) - Técnicos
+ */
+// function transformTecnicoToApiFormat(
+//   data: CreateTecnicoData | UpdateTecnicoData
+// ): any {
+//   const transformed: any = {};
+
+//   if ("nome" in data && data.nome !== undefined) transformed.name = data.nome;
+//   if ("endereco" in data && data.endereco !== undefined)
+//     transformed.address = data.endereco;
+//   if ("latitude" in data && data.latitude !== undefined)
+//     transformed.latitude = data.latitude;
+//   if ("longitude" in data && data.longitude !== undefined)
+//     transformed.longitude = data.longitude;
+//   if ("placeId" in data && data.placeId !== undefined)
+//     transformed.placeId = data.placeId;
+//   if ("placa" in data && data.placa !== undefined)
+//     transformed.plate = data.placa;
+//   if ("telefone" in data && data.telefone !== undefined)
+//     transformed.phone = data.telefone;
+//   if ("email" in data && data.email !== undefined)
+//     transformed.email = data.email;
+//   if ("especialidade" in data && data.especialidade !== undefined)
+//     transformed.specialty = data.especialidade;
+
+//   return transformed;
+// }
+
+export async function createTecnico(data: CreateTecnicoData): Promise<Tecnico> {
+  const apiData = data;
+  return fetchAPI<Tecnico>(`/tecnicos`, {
+    method: "POST",
+    body: JSON.stringify(apiData),
+  });
+}
+
+export interface UpdateTecnicoData {
+  nome?: string;
+  telefone?: string;
+  email?: string;
+  endereco?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  placa?: string;
+  especialidade?: string;
+}
+
+export async function updateTecnico(
+  id: string,
+  data: UpdateTecnicoData
+): Promise<Tecnico> {
+  const apiData = data;
+  return fetchAPI<Tecnico>(`/tecnicos/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(apiData),
+  });
+}
+
+export async function deleteTecnico(id: string): Promise<void> {
+  return fetchAPI<void>(`/tecnicos/${id}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Importa técnicos a partir de um arquivo Excel
+ * O backend processa o arquivo, busca coordenadas via Google Maps e salva os técnicos
+ */
+export async function importTecnicosExcel(file: File): Promise<Tecnico[]> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const url = `${API_URL}/tecnicos/import`;
+  const workspaceId = getWorkspaceId();
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+      headers: workspaceId ? { "x-workspace-id": workspaceId } : {},
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Erro desconhecido",
+      }));
+      throw new Error(error.message || `Erro HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Erro ao importar técnicos:", error);
+    throw error;
+  }
+}
+
 // ==================== VISITAS ====================
 
 export interface GetVisitasParams {
@@ -182,7 +393,13 @@ export interface GetVisitasParams {
 export async function getVisitas(
   params: GetVisitasParams = {}
 ): Promise<PaginatedResponse<Visita>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString({
+    join: [
+      "cliente(nome,endereco)",
+      "tecnico(nome,endereco)",
+    ], ...params
+  });
+  console.log(queryString)
   return fetchAPI<PaginatedResponse<Visita>>(`/visitas${queryString}`);
 }
 
@@ -200,6 +417,23 @@ export async function getVisitasStats(
 ): Promise<VisitaStats> {
   const queryString = buildQueryString(params);
   return fetchAPI<VisitaStats>(`/visitas/stats${queryString}`);
+}
+
+export interface UpdateVisitaData {
+  tecnicoId?: string;
+  status?: string;
+  dataAgendamento?: string;
+  observacoes?: string;
+}
+
+export async function updateVisita(
+  id: string,
+  data: UpdateVisitaData
+): Promise<Visita> {
+  return fetchAPI<Visita>(`/visitas/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 // ==================== CHAMADOS ====================
@@ -249,11 +483,123 @@ export interface GetRoteirosParams {
 export async function getRoteiros(
   params: GetRoteirosParams = {}
 ): Promise<PaginatedResponse<Roteiro>> {
-  const queryString = buildQueryString(params);
+  const queryString = buildQueryString({
+    join: [
+      "visitas",
+      "tecnico",
+      "visitas.cliente"
+    ], ...params
+  });
   return fetchAPI<PaginatedResponse<Roteiro>>(`/roteiros${queryString}`);
 }
 
 export async function getRoteiro(id: string): Promise<Roteiro> {
-  return fetchAPI<Roteiro>(`/roteiros/${id}`);
+  const queryString = buildQueryString({
+    join: ["visitas", "tecnico", "visitas.cliente"],
+  });
+  return fetchAPI<Roteiro>(`/roteiros/${id}${queryString}`);
 }
 
+// ==================== SOLICITAÇÕES ====================
+
+export async function createSolicitacao(
+  data: SolicitacaoFormValues
+): Promise<Solicitacao> {
+  console.log(data)
+  return fetchAPI<Solicitacao>(`/chamados/abertura`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ==================== RELATÓRIOS DE VISITA ====================
+
+export interface CreateRelatorioVisitaData {
+  visitaId: string;
+  clienteNome: string;
+  endereco: string;
+  data: string;
+  horarioInicio: string;
+  horarioFim?: string;
+  descricaoGeral: string;
+  avaliacao: number;
+  observacoesAvaliacao?: string;
+  assinaturaCliente: string;
+}
+
+export interface RelatorioVisita extends CreateRelatorioVisitaData {
+  id: string;
+  workspaceId: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/**
+ * Cria um novo relatório de visita
+ * Endpoint: POST /relatorios-visita
+ */
+export async function createRelatorioVisita(
+  data: CreateRelatorioVisitaData
+): Promise<RelatorioVisita> {
+  return fetchAPI<RelatorioVisita>(`/relatorios-visita`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ==================== AGENDA ====================
+
+export async function gerarVisitasDoMes(data: string, salvar: boolean): Promise<void> {
+  return fetchAPI<void>(`/agenda/mes`, {
+    method: "POST",
+    body: JSON.stringify({ data, salvar }),
+  });
+}
+
+export async function gerarRoteiroDoDia(data: string, salvar: boolean): Promise<void> {
+  return fetchAPI<void>(`/agenda/roteiro-dia`, {
+    method: "POST",
+    body: JSON.stringify({ data, salvar }),
+  });
+}
+
+// ==================== DASHBOARD ====================
+
+export interface DashboardStats {
+  totalClientes: number;
+  tecnicosAtivos: number;
+  visitasAgendadas: number;
+  chamadosAbertos: number;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  return fetchAPI<DashboardStats>(`/dashboard/stats`);
+}
+
+// ==================== RELATÓRIOS DE VISITA - LISTAGEM ====================
+
+export interface GetRelatoriosParams {
+  page?: number;
+  limit?: number;
+  dataInicio?: string;
+  dataFim?: string;
+  clienteNome?: string;
+  avaliacao?: number;
+}
+
+export async function getRelatoriosVisita(
+  params: GetRelatoriosParams = {}
+): Promise<PaginatedResponse<RelatorioVisita>> {
+  const queryString = buildQueryString({
+    join: [
+      "visita",
+      "visita.cliente",
+      "visita.tecnico"
+    ], ...params
+  });
+  return fetchAPI<PaginatedResponse<RelatorioVisita>>(`/relatorios-visita${queryString}`);
+}
+
+export async function getRelatorioVisita(id: string): Promise<RelatorioVisita> {
+  return fetchAPI<RelatorioVisita>(`/relatorios-visita/${id}`);
+}

@@ -1,17 +1,13 @@
 import { VisitasList } from "@/components/visitas/visitas-list";
-import { getVisitas, getVisitasStats } from "@/lib/api";
+import { getVisitasServer } from "@/lib/api-server";
 
 export default async function VisitasPage() {
   let visitas = [];
   let stats = { realizadas: 0, pendentes: 0, noRoteiro: 0 };
   
   try {
-    const [visitasResponse, statsResponse] = await Promise.all([
-      getVisitas({ limit: 100 }),
-      getVisitasStats(),
-    ]);
+    const visitasResponse = await getVisitasServer({ limit: 100 });
     visitas = visitasResponse.data;
-    stats = statsResponse;
   } catch (error) {
     console.error("Erro ao carregar visitas:", error);
   }
@@ -28,4 +24,5 @@ export default async function VisitasPage() {
     </div>
   );
 }
+
 

@@ -1,0 +1,85 @@
+"use client";
+
+import { useEffect, useState, createContext, useContext, useCallback } from "react";
+import { authClient } from "@/lib/auth";
+import { setWorkspaceId } from "@/lib/api";
+
+interface WorkspaceContextType {
+  workspaceId: string | null;
+  isLoading: boolean;
+  updateWorkspaceId: (id: string) => void;
+}
+
+const WorkspaceContext = createContext<WorkspaceContextType>({
+  workspaceId: null,
+  isLoading: true,
+  updateWorkspaceId: () => {},
+});
+
+export function useWorkspace() {
+  return useContext(WorkspaceContext);
+}
+
+interface WorkspaceProviderProps {
+  children: React.ReactNode;
+}
+
+export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
+  const [workspaceId, setWorkspaceIdState] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    syncWorkspace();
+  }, []);
+
+  const syncWorkspace = async () => {
+    try {
+      const session = await authClient.getSession();
+      const activeOrgId = session.data?.session?.activeOrganizationId;
+
+      console.log("[WorkspaceProvider] Session activeOrgId:", activeOrgId);
+
+      if (activeOrgId) {
+        setWorkspaceId(activeOrgId);
+        setWorkspaceIdState(activeOrgId);
+        console.log("[WorkspaceProvider] Workspace synced:", activeOrgId);
+      } else {
+        // Try to get first organization and set it as active
+        const orgsResult = await authClient.organization.list();
+        const orgsData = orgsResult.data
+          ? Array.isArray(orgsResult.data)
+            ? orgsResult.data
+            : []
+          : [];
+
+        if (orgsData.length > 0) {
+          const firstOrg = orgsData[0];
+          console.log("[WorkspaceProvider] Setting first org as active:", firstOrg.id);
+          await authClient.organization.setActive({ organizationId: firstOrg.id });
+          setWorkspaceId(firstOrg.id);
+          setWorkspaceIdState(firstOrg.id);
+          console.log("[WorkspaceProvider] First org set:", firstOrg.id);
+        } else {
+          console.log("[WorkspaceProvider] No organizations found");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao sincronizar workspace:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateWorkspaceId = useCallback((id: string) => {
+    console.log("[WorkspaceProvider] Updating workspace to:", id);
+    setWorkspaceId(id);
+    setWorkspaceIdState(id);
+  }, []);
+
+  return (
+    <WorkspaceContext.Provider value={{ workspaceId, isLoading, updateWorkspaceId }}>
+      {children}
+    </WorkspaceContext.Provider>
+  );
+}
+

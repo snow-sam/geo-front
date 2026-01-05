@@ -1,11 +1,11 @@
 import { TecnicosList } from "@/components/tecnicos/tecnicos-list";
-import { getTecnicos } from "@/lib/api";
+import { getTecnicosServer } from "@/lib/api-server";
 
 export default async function TecnicosPage() {
   let tecnicos = [];
   
   try {
-    const response = await getTecnicos({ limit: 100 });
+    const response = await getTecnicosServer({ limit: 100 });
     tecnicos = response.data;
   } catch (error) {
     console.error("Erro ao carregar técnicos:", error);
@@ -23,4 +23,5 @@ export default async function TecnicosPage() {
     </div>
   );
 }
+
 

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Filter, X, Route } from "lucide-react";
+import { gerarRoteiroDoDia } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RoteiroCard } from "@/components/roteiros/roteiro-card";
+import { RoteiroDetailDialog } from "@/components/roteiros/roteiro-detail-dialog";
 import type { Roteiro, RoteiroFilters } from "@/types/roteiro";
 import {
   Sheet,
@@ -43,6 +46,7 @@ interface RoteirosListProps {
 }
 
 export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
+  const router = useRouter();
   const [roteiros] = useState<Roteiro[]>(initialRoteiros);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,12 +57,26 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
     dataFim: null,
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [selectedRoteiroId, setSelectedRoteiroId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+  // Evita hydration mismatch com componentes Radix (Sheet)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Extrair técnicos únicos para o filtro
   const tecnicos = useMemo(() => {
     const uniqueTecnicos = Array.from(
       new Map(
-        roteiros.map((r) => [r.tecnicoId, { id: r.tecnicoId, nome: r.tecnicoNome }])
+        roteiros.map((r) => {
+          const tecnicoNome = typeof r.tecnico === 'object' && r.tecnico 
+            ? r.tecnico.nome 
+            : r.tecnicoNome || "Técnico não definido";
+          return [r.tecnicoId, { id: r.tecnicoId, nome: tecnicoNome }];
+        })
       ).values()
     );
     return uniqueTecnicos.sort((a, b) => a.nome.localeCompare(b.nome));
@@ -66,12 +84,16 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
 
   const filteredRoteiros = useMemo(() => {
     return roteiros.filter((roteiro) => {
+      const tecnicoNome = typeof roteiro.tecnico === 'object' && roteiro.tecnico 
+        ? roteiro.tecnico.nome 
+        : roteiro.tecnicoNome || "";
+        
       // Filtro de busca por texto (técnico ou cliente)
       const matchesSearch =
         searchTerm === "" ||
-        roteiro.tecnicoNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        roteiro.clientes.some((cliente) =>
-          cliente.clienteNome.toLowerCase().includes(searchTerm.toLowerCase())
+        tecnicoNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        roteiro.visitas?.some((visita) =>
+          visita.cliente?.nome?.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
       // Filtro de técnico
@@ -81,9 +103,9 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
       // Filtro de cliente
       const matchesCliente =
         !filters.clienteNome ||
-        roteiro.clientes.some((cliente) =>
-          cliente.clienteNome
-            .toLowerCase()
+        roteiro.visitas?.some((visita) =>
+          visita.cliente?.nome
+            ?.toLowerCase()
             .includes(filters.clienteNome!.toLowerCase())
         );
 
@@ -149,8 +171,26 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
   ].filter((f) => f !== null).length;
 
   const handleView = (id: string) => {
-    // TODO: Implementar visualização detalhada do roteiro
-    console.log("Ver roteiro:", id);
+    setSelectedRoteiroId(id);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleGerarRoteiro = async () => {
+    setIsGenerating(true);
+    try {
+      // Formata a data de hoje em YYYY-MM-DD
+      const hoje = new Date();
+      const dataFormatada = hoje.toISOString().split("T")[0];
+      
+      await gerarRoteiroDoDia(dataFormatada, true);
+      
+      // Recarrega os roteiros
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao gerar roteiro:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const formatDateForInput = (dateString: string | null) => {
@@ -173,18 +213,19 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
           />
         </div>
         <div className="flex gap-2">
-          <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" className="relative">
-                <Filter className="mr-2 h-4 w-4" />
-                Filtros
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-xs text-white flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </Button>
-            </SheetTrigger>
+          {mounted && (
+            <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="relative">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filtros
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-xs text-white flex items-center justify-center">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
             <SheetContent className="overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>Filtros</SheetTitle>
@@ -375,11 +416,12 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
                 )}
               </div>
             </SheetContent>
-          </Sheet>
+            </Sheet>
+          )}
 
-          <Button>
+          <Button onClick={handleGerarRoteiro} disabled={isGenerating}>
             <Route className="mr-2 h-4 w-4" />
-            Gerar Roteiro
+            {isGenerating ? "Gerando..." : "Gerar Roteiro"}
           </Button>
         </div>
       </div>
@@ -457,6 +499,13 @@ export function RoteirosList({ initialRoteiros }: RoteirosListProps) {
           </Button>
         </div>
       )}
+
+      {/* Dialog de Detalhes do Roteiro */}
+      <RoteiroDetailDialog
+        roteiroId={selectedRoteiroId}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+      />
     </div>
   );
 }

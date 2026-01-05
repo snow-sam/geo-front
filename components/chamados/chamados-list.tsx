@@ -147,7 +147,7 @@ export function ChamadosList({ initialChamados, initialStats }: ChamadosListProp
   return (
     <div className="space-y-6">
       {/* Estatísticas */}
-      <ChamadosStats stats={initialStats} />
+      {/* <ChamadosStats stats={initialStats} /> */}
 
       {/* Barra de ações */}
       <div className="flex flex-col sm:flex-row gap-4">

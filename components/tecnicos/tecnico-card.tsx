@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Car, Phone, Edit, Trash2 } from "lucide-react";
+import { MapPin, Car, Phone, Mail, Edit, Trash2, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,18 +47,33 @@ export function TecnicoCard({ tecnico, onDelete, onEdit }: TecnicoCardProps) {
       </CardHeader>
       <CardContent className="space-y-3 flex-1">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <Car className="h-4 w-4 flex-shrink-0" />
-          <span className="font-medium">Placa: {tecnico.placa}</span>
+          <Phone className="h-4 w-4 flex-shrink-0" />
+          <a
+            href={`tel:${tecnico.telefone}`}
+            className="hover:text-primary hover:underline"
+          >
+            {tecnico.telefone}
+          </a>
         </div>
-        {tecnico.telefone && (
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <Mail className="h-4 w-4 flex-shrink-0" />
+          <a
+            href={`mailto:${tecnico.email}`}
+            className="hover:text-primary hover:underline truncate"
+          >
+            {tecnico.email}
+          </a>
+        </div>
+        {tecnico.placa && (
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Phone className="h-4 w-4 flex-shrink-0" />
-            <a
-              href={`tel:${tecnico.telefone}`}
-              className="hover:text-primary hover:underline"
-            >
-              {tecnico.telefone}
-            </a>
+            <Car className="h-4 w-4 flex-shrink-0" />
+            <span className="font-medium">{tecnico.placa}</span>
+          </div>
+        )}
+        {tecnico.especialidade && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <Wrench className="h-4 w-4 flex-shrink-0" />
+            <span>{tecnico.especialidade}</span>
           </div>
         )}
       </CardContent>

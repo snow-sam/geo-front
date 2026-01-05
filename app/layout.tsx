@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AppSidebar } from "@/components/sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { GoogleMapsScript } from "@/components/google-maps-script";
 
 const geistSans = Geist({
@@ -32,18 +30,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <main className="flex-1 overflow-y-auto w-full">
-            <div className="flex items-center border-b h-16 px-4">
-              <SidebarTrigger />
-              <h2 className="ml-4 text-lg font-semibold">Sistema de Gestão</h2>
-            </div>
-            <div className="container mx-auto p-6">
-              {children}
-            </div>
-          </main>
-        </SidebarProvider>
+        {children}
         <GoogleMapsScript apiKey={googleMapsApiKey} />
       </body>
     </html>

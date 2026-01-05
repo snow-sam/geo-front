@@ -1,12 +1,18 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
   Users,
   Wrench,
   ClipboardList,
   Phone,
   Route,
+  LogOut,
+  Loader2,
+  Building2,
+  LayoutDashboard,
+  FileText,
 } from "lucide-react";
 
 import {
@@ -21,6 +27,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth";
+import { OrgSelector } from "@/components/organization/org-selector";
 
 const menuItems = [
   {
@@ -53,13 +62,39 @@ const menuItems = [
     url: "/chamados",
     icon: Phone,
   },
+  {
+    title: "Relatórios",
+    url: "/relatorios",
+    icon: FileText,
+  },
+  {
+    title: "Organização",
+    url: "/organizacao",
+    icon: Building2,
+  },
 ];
 
 export function AppSidebar() {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await authClient.signOut();
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex h-16 items-center px-4">
+        <div className="flex flex-col gap-3 px-4 py-4">
           <h1 className="text-xl font-bold">RotGo</h1>
         </div>
       </SidebarHeader>
@@ -83,7 +118,26 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="p-4">
+        <div className="p-4 space-y-3">
+          <OrgSelector />
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saindo...
+              </>
+            ) : (
+              <>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </>
+            )}
+          </Button>
           <p className="text-xs text-muted-foreground text-center">
             © 2025 RotGo
           </p>
@@ -92,4 +146,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-

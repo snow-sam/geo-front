@@ -13,16 +13,19 @@ interface RoteiroCardProps {
 
 export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Extrai apenas a parte da data (YYYY-MM-DD) para evitar problemas de timezone
+    const datePart = dateString.split("T")[0];
+    const [year, month, day] = datePart.split("-").map(Number);
+    // Cria a data usando o horário local (meio-dia para evitar problemas)
+    const date = new Date(year, month - 1, day, 12, 0, 0);
     return date.toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      timeZone: "America/Sao_Paulo",
     });
   };
 
-  const formatTime = (minutes?: number) => {
+  const formatTime = (minutes?: number | null) => {
     if (!minutes) return "N/A";
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -32,6 +35,10 @@ export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
     return `${mins}min`;
   };
 
+  const tecnicoNome = typeof roteiro.tecnico === 'object' && roteiro.tecnico 
+    ? roteiro.tecnico.nome 
+    : roteiro.tecnicoNome || "Técnico não definido";
+  console.log("roteiro", roteiro);
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
@@ -39,7 +46,7 @@ export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
           <div className="space-y-1 flex-1">
             <CardTitle className="text-lg flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              {roteiro.tecnicoNome}
+              {tecnicoNome}
             </CardTitle>
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <Calendar className="h-4 w-4" />
@@ -56,7 +63,7 @@ export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
             <MapPin className="h-4 w-4 text-blue-500" />
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Paradas</p>
-              <p className="font-semibold">{roteiro.clientes.length}</p>
+              <p className="font-semibold">{roteiro.visitas?.length || 0}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -80,24 +87,24 @@ export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
 
         <Separator />
 
-        {/* Lista de clientes */}
+        {/* Lista de visitas */}
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
             Clientes no Roteiro
           </p>
           <div className="space-y-2 max-h-32 overflow-y-auto">
-            {roteiro.clientes.map((cliente) => (
+            {[...(roteiro.visitas || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).map((visita) => (
               <div
-                key={cliente.clienteId}
+                key={visita.id}
                 className="flex items-start gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-md"
               >
                 <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
-                  {cliente.ordem}
+                  {visita.ordem || "-"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{cliente.clienteNome}</p>
+                  <p className="font-medium truncate">{visita.cliente?.nome || "Cliente não encontrado"}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {cliente.clienteEndereco}
+                    {visita.cliente?.endereco}
                   </p>
                 </div>
               </div>
@@ -121,4 +128,3 @@ export function RoteiroCard({ roteiro, onView }: RoteiroCardProps) {
     </Card>
   );
 }
-

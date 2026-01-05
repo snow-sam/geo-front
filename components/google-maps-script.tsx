@@ -8,7 +8,7 @@ interface GoogleMapsScriptProps {
 }
 
 export function GoogleMapsScript({ apiKey }: GoogleMapsScriptProps) {
-  const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=pt-BR&loading=async`;
+  const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&language=pt-BR&loading=async`;
 
   return (
     <Script

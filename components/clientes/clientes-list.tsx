@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Plus, Filter, X } from "lucide-react";
+import { Search, Plus, Filter, X, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClienteCard } from "@/components/clientes/cliente-card";
 import { ClienteForm } from "@/components/clientes/cliente-form";
+import { ClienteImport } from "@/components/clientes/cliente-import";
 import type { Cliente, ClienteFilters } from "@/types/cliente";
 import {
   Sheet,
@@ -50,6 +51,7 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -178,6 +180,10 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleImportSuccess = (importedClientes: Cliente[]) => {
+    setClientes((prev) => [...importedClientes, ...prev]);
   };
 
   return (
@@ -358,6 +364,13 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
             </SheetContent>
           </Sheet>
 
+          <Button
+            variant="outline"
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Importar Excel
+          </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Cliente
@@ -482,6 +495,13 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Importação */}
+      <ClienteImport
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportSuccess={handleImportSuccess}
+      />
     </div>
   );
 }
