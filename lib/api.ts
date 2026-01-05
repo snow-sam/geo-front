@@ -6,7 +6,7 @@ import type { Roteiro } from "@/types/roteiro";
 import type { Solicitacao, SolicitacaoFormValues } from "@/types/solicitacao";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
 
 /**
  * Obtém o workspace ID do localStorage (preferencial) ou cookie

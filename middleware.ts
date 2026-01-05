@@ -5,7 +5,7 @@ const publicRoutes = ["/login", "/cadastro", "/solicitacao", "/tecnico/login"];
 const authRoutes = ["/login", "/cadastro"];
 const tecnicoAuthRoutes = ["/tecnico/login"];
 
-const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:3001/api/v1/auth";
+const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
 
 async function getSession(request: NextRequest): Promise<boolean> {
   // Pegar todos os cookies relacionados ao better-auth

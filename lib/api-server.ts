@@ -10,7 +10,7 @@ import type { Visita, VisitaStats } from "@/types/visita";
 import { cookies } from "next/headers";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "https://backend-geo-crud--samuelf21.replit.app/api/v1";
 
 export interface PaginatedResponse<T> {
   data: T[];
