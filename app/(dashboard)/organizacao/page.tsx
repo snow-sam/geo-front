@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Building2, Users, UserPlus, Settings, Loader2, Plus } from "lucide-react";
-import { authClient } from "@/lib/auth";
+import { organizationClient } from "@/lib/organization-client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,14 +62,15 @@ function OrganizacaoContent() {
     try {
       setIsLoading(true);
 
-      // Get session and user info
-      const session = await authClient.getSession();
-      if (session.data?.user) {
-        setCurrentUserId(session.data.user.id);
+      // Get session and user info (usando API route local)
+      const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
+      const sessionData = await sessionRes.json();
+      if (sessionData?.user) {
+        setCurrentUserId(sessionData.user.id);
       }
 
       // Get active organization
-      const activeOrgId = session.data?.session?.activeOrganizationId;
+      const activeOrgId = sessionData?.session?.activeOrganizationId;
       if (!activeOrgId) {
         // No active org, show create modal
         setIsLoading(false);
@@ -77,7 +78,7 @@ function OrganizacaoContent() {
       }
 
       // Get organization details
-      const orgResult = await authClient.organization.getFullOrganization();
+      const orgResult = await organizationClient.getFullOrganization();
       if (orgResult.data) {
         const orgData = orgResult.data;
         setOrganization({
@@ -92,7 +93,7 @@ function OrganizacaoContent() {
         });
         
         // Get members
-        const membersResult = await authClient.organization.listMembers();
+        const membersResult = await organizationClient.listMembers();
         if (membersResult.data) {
           // Handle both array and object with members property
           const rawMembers = Array.isArray(membersResult.data) 
@@ -122,7 +123,7 @@ function OrganizacaoContent() {
           
           // Find current user's role
           const currentMember = membersData.find(
-            (m) => m.userId === session.data?.user?.id
+            (m) => m.userId === sessionData?.user?.id
           );
           if (currentMember) {
             setCurrentUserRole(currentMember.role as OrganizationRole);
@@ -131,7 +132,7 @@ function OrganizacaoContent() {
 
         // Get invitations
         try {
-          const invitationsResult = await authClient.organization.listInvitations();
+          const invitationsResult = await organizationClient.listInvitations();
           if (invitationsResult.data) {
             const invitationsData: Invitation[] = invitationsResult.data.map((inv) => ({
               id: inv.id,
@@ -170,7 +171,7 @@ function OrganizacaoContent() {
     try {
       const slug = newOrgSlug.trim() || newOrgName.toLowerCase().replace(/\s+/g, "-");
       
-      const result = await authClient.organization.create({
+      const result = await organizationClient.create({
         name: newOrgName,
         slug,
       });
@@ -182,7 +183,7 @@ function OrganizacaoContent() {
 
       // Set as active
       if (result.data?.id) {
-        await authClient.organization.setActive({
+        await organizationClient.setActive({
           organizationId: result.data.id,
         });
       }

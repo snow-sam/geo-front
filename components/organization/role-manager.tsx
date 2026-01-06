@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { authClient } from "@/lib/auth";
+import { organizationClient } from "@/lib/organization-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -57,7 +57,7 @@ export function RoleManager({ member, open, onClose, onUpdate }: RoleManagerProp
     setError(null);
 
     try {
-      await authClient.organization.updateMemberRole({
+      await organizationClient.updateMemberRole({
         memberId: member.id,
         role: selectedRole,
       });

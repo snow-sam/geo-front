@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Mail, Send, Loader2, X, Clock, UserPlus } from "lucide-react";
-import { authClient } from "@/lib/auth";
+import { organizationClient } from "@/lib/organization-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -73,7 +73,7 @@ export function InviteForm({ invitations, canInvite, onUpdate }: InviteFormProps
     setSuccess(null);
 
     try {
-      const result = await authClient.organization.inviteMember({
+      const result = await organizationClient.inviteMember({
         email: values.email,
         role: values.role,
       });
@@ -96,7 +96,7 @@ export function InviteForm({ invitations, canInvite, onUpdate }: InviteFormProps
   const handleCancelInvitation = async (invitationId: string) => {
     setCancelingId(invitationId);
     try {
-      await authClient.organization.cancelInvitation({
+      await organizationClient.cancelInvitation({
         invitationId,
       });
       onUpdate();

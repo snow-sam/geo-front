@@ -18,7 +18,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth";
 
 const menuItems = [
   {
@@ -36,7 +35,10 @@ export function TecnicoSidebar() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await authClient.signOut();
+      await fetch("/api/auth/sign-out", {
+        method: "POST",
+        credentials: "include",
+      });
       router.push("/tecnico/login");
       router.refresh();
     } catch (error) {

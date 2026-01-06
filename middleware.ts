@@ -5,40 +5,19 @@ const publicRoutes = ["/login", "/cadastro", "/solicitacao", "/tecnico/login"];
 const authRoutes = ["/login", "/cadastro"];
 const tecnicoAuthRoutes = ["/tecnico/login"];
 
-const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
+// Nomes dos cookies do better-auth
+const SESSION_COOKIE_NAME = "better-auth.session_token";
+const SESSION_COOKIE_NAME_SECURE = "__Secure-better-auth.session_token";
 
-async function getSession(request: NextRequest): Promise<boolean> {
-  // Pegar todos os cookies relacionados ao better-auth
-  const cookies = request.cookies.getAll();
-  const cookieHeader = cookies
-    .map((cookie) => `${cookie.name}=${cookie.value}`)
-    .join("; ");
-
-  if (!cookieHeader) {
-    return false;
-  }
-
-  try {
-    const response = await fetch(`${AUTH_API_URL}/get-session`, {
-      method: "GET",
-      headers: {
-        Cookie: cookieHeader,
-      },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      return false;
-    }
-
-    const data = await response.json();
-    return !!data?.session;
-  } catch {
-    return false;
-  }
+function hasSessionCookie(request: NextRequest): boolean {
+  // Verificar se existe algum cookie de sessão do better-auth
+  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME);
+  const secureSessionToken = request.cookies.get(SESSION_COOKIE_NAME_SECURE);
+  
+  return !!(sessionToken?.value || secureSessionToken?.value);
 }
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Ignorar arquivos estáticos e API routes
@@ -56,8 +35,8 @@ export async function middleware(request: NextRequest) {
   const isTecnicoAuthRoute = tecnicoAuthRoutes.some((route) => pathname.startsWith(route));
   const isTecnicoRoute = pathname.startsWith("/tecnico");
 
-  // Verificar sessão com o backend
-  const hasSession = await getSession(request);
+  // Verificar se existe cookie de sessão
+  const hasSession = hasSessionCookie(request);
 
   // Se usuário está autenticado e tenta acessar login do técnico, redireciona para portal do técnico
   if (hasSession && isTecnicoAuthRoute) {

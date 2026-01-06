@@ -28,7 +28,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth";
 import { OrgSelector } from "@/components/organization/org-selector";
 
 const menuItems = [
@@ -81,7 +80,10 @@ export function AppSidebar() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await authClient.signOut();
+      await fetch("/api/auth/sign-out", {
+        method: "POST",
+        credentials: "include",
+      });
       router.push("/login");
       router.refresh();
     } catch (error) {

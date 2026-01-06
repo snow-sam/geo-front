@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MoreHorizontal, UserMinus, Shield, Loader2 } from "lucide-react";
-import { authClient } from "@/lib/auth";
+import { organizationClient } from "@/lib/organization-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -73,7 +73,7 @@ export function MembersList({
 
     setIsRemoving(true);
     try {
-      await authClient.organization.removeMember({
+      await organizationClient.removeMember({
         memberIdOrEmail: memberToRemove.userId,
       });
       onUpdate();

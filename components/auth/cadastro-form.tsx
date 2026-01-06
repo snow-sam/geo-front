@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth";
 
 const cadastroSchema = z.object({
   name: z.string().min(2, { message: "Nome deve ter no mínimo 2 caracteres" }),
@@ -52,14 +51,24 @@ export function CadastroForm() {
     setError(null);
 
     try {
-      const result = await authClient.signUp.email({
-        name: values.name,
-        email: values.email,
-        password: values.password,
+      // Usar API route local para definir cookies corretamente
+      const response = await fetch("/api/auth/sign-up", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+        }),
+        credentials: "include",
       });
 
-      if (result.error) {
-        setError(result.error.message || "Erro ao criar conta");
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        setError(result.error?.message || "Erro ao criar conta");
         return;
       }
 

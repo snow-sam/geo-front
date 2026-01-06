@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, useCallback } from "react";
-import { authClient } from "@/lib/auth";
+import { organizationClient } from "@/lib/organization-client";
 import { setWorkspaceId } from "@/lib/api";
 
 interface WorkspaceContextType {
@@ -34,16 +34,17 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
   const syncWorkspace = async () => {
     try {
-      const session = await authClient.getSession();
-      const activeOrgId = session.data?.session?.activeOrganizationId;
-
+      // Usar API route local para obter sessão (evita problemas de cross-domain)
+      const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
+      const sessionData = await sessionRes.json();
+      const activeOrgId = sessionData?.session?.activeOrganizationId;
 
       if (activeOrgId) {
         setWorkspaceId(activeOrgId);
         setWorkspaceIdState(activeOrgId);
       } else {
         // Try to get first organization and set it as active
-        const orgsResult = await authClient.organization.list();
+        const orgsResult = await organizationClient.list();
         const orgsData = orgsResult.data
           ? Array.isArray(orgsResult.data)
             ? orgsResult.data
@@ -52,7 +53,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
         if (orgsData.length > 0) {
           const firstOrg = orgsData[0];
-          await authClient.organization.setActive({ organizationId: firstOrg.id });
+          await organizationClient.setActive({ organizationId: firstOrg.id });
           setWorkspaceId(firstOrg.id);
           setWorkspaceIdState(firstOrg.id);
         } else {

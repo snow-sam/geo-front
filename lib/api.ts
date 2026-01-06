@@ -5,8 +5,8 @@ import type { Chamado, ChamadoStats } from "@/types/chamado";
 import type { Roteiro } from "@/types/roteiro";
 import type { Solicitacao, SolicitacaoFormValues } from "@/types/solicitacao";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
+// Usar API route proxy local para evitar problemas de CORS/cookies cross-domain
+const API_URL = "/api/proxy";
 
 /**
  * Obtém o workspace ID do localStorage (preferencial) ou cookie
@@ -194,7 +194,6 @@ export async function importClientesExcel(file: File): Promise<Cliente[]> {
       body: formData,
       credentials: "include",
       headers: workspaceId ? { "x-workspace-id": workspaceId } : {},
-      // Não definir Content-Type - o browser define automaticamente com boundary para FormData
     });
 
     if (!response.ok) {
