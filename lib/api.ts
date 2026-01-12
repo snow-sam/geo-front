@@ -8,33 +8,64 @@ import type { Solicitacao, SolicitacaoFormValues } from "@/types/solicitacao";
 // Usar API route proxy local para evitar problemas de CORS/cookies cross-domain
 const API_URL = "/api/proxy";
 
+// Cache em memória para workspace (útil quando localStorage/cookie não funcionam)
+let workspaceIdCache: string | null = null;
+
 /**
- * Obtém o workspace ID do localStorage (preferencial) ou cookie
+ * Obtém o workspace ID do localStorage, sessionStorage, cookie ou cache em memória
  */
 function getWorkspaceId(): string | null {
   if (typeof window === "undefined") return null;
   
   try {
-    // Primeiro tenta localStorage (mais atualizado)
-    const fromStorage = localStorage.getItem("activeWorkspaceId");
-    if (fromStorage) {
-      console.log(`[getWorkspaceId] ✅ Encontrado no localStorage: ${fromStorage.substring(0, 8)}...`);
-      return fromStorage;
+    // 1. Tenta localStorage primeiro (persiste entre sessões)
+    try {
+      const fromLocalStorage = localStorage.getItem("activeWorkspaceId");
+      if (fromLocalStorage) {
+        console.log(`[getWorkspaceId] ✅ Encontrado no localStorage: ${fromLocalStorage.substring(0, 8)}...`);
+        workspaceIdCache = fromLocalStorage; // Atualizar cache
+        return fromLocalStorage;
+      }
+    } catch (e) {
+      console.warn(`[getWorkspaceId] Erro ao acessar localStorage:`, e);
     }
     
-    // Fallback para cookie
-    const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
-    if (cookieMatch) {
-      const cookieValue = decodeURIComponent(cookieMatch[1]);
-      console.log(`[getWorkspaceId] ✅ Encontrado no cookie: ${cookieValue.substring(0, 8)}...`);
-      return cookieValue;
+    // 2. Tenta sessionStorage (persiste durante a sessão do navegador)
+    try {
+      const fromSessionStorage = sessionStorage.getItem("activeWorkspaceId");
+      if (fromSessionStorage) {
+        console.log(`[getWorkspaceId] ✅ Encontrado no sessionStorage: ${fromSessionStorage.substring(0, 8)}...`);
+        workspaceIdCache = fromSessionStorage; // Atualizar cache
+        return fromSessionStorage;
+      }
+    } catch (e) {
+      console.warn(`[getWorkspaceId] Erro ao acessar sessionStorage:`, e);
     }
     
-    console.log(`[getWorkspaceId] ⚠️ Workspace não encontrado em localStorage nem cookie`);
+    // 3. Fallback para cookie
+    try {
+      const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
+      if (cookieMatch) {
+        const cookieValue = decodeURIComponent(cookieMatch[1]);
+        console.log(`[getWorkspaceId] ✅ Encontrado no cookie: ${cookieValue.substring(0, 8)}...`);
+        workspaceIdCache = cookieValue; // Atualizar cache
+        return cookieValue;
+      }
+    } catch (e) {
+      console.warn(`[getWorkspaceId] Erro ao acessar cookie:`, e);
+    }
+    
+    // 4. Último recurso: cache em memória (só funciona durante a sessão atual)
+    if (workspaceIdCache) {
+      console.log(`[getWorkspaceId] ✅ Encontrado no cache em memória: ${workspaceIdCache.substring(0, 8)}...`);
+      return workspaceIdCache;
+    }
+    
+    console.log(`[getWorkspaceId] ⚠️ Workspace não encontrado em nenhum storage`);
     return null;
   } catch (e) {
-    console.warn(`[getWorkspaceId] Erro ao acessar storage:`, e);
-    return null;
+    console.warn(`[getWorkspaceId] Erro geral ao acessar storage:`, e);
+    return workspaceIdCache; // Retornar cache se disponível
   }
 }
 
@@ -44,12 +75,24 @@ function getWorkspaceId(): string | null {
 export function setWorkspaceId(workspaceId: string | null): void {
   if (typeof window === "undefined") return;
 
+  // Atualizar cache em memória sempre
+  workspaceIdCache = workspaceId;
+
   if (workspaceId) {
-    // Salvar no localStorage para client-side
+    // 1. Salvar no localStorage (persiste entre sessões)
     try {
       localStorage.setItem("activeWorkspaceId", workspaceId);
+      console.log(`[setWorkspaceId] ✅ Salvo no localStorage`);
     } catch (e) {
       console.warn("[setWorkspaceId] Erro ao salvar no localStorage:", e);
+    }
+    
+    // 2. Salvar no sessionStorage (persiste durante a sessão)
+    try {
+      sessionStorage.setItem("activeWorkspaceId", workspaceId);
+      console.log(`[setWorkspaceId] ✅ Salvo no sessionStorage`);
+    } catch (e) {
+      console.warn("[setWorkspaceId] Erro ao salvar no sessionStorage:", e);
     }
     
     // Salvar também como cookie para SSR e requisições
@@ -100,12 +143,24 @@ export function setWorkspaceId(workspaceId: string | null): void {
     }
     
   } else {
+    // Limpar todos os storages
     try {
       localStorage.removeItem("activeWorkspaceId");
     } catch (e) {
       console.warn("[setWorkspaceId] Erro ao remover do localStorage:", e);
     }
-    document.cookie = "x-workspace-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    
+    try {
+      sessionStorage.removeItem("activeWorkspaceId");
+    } catch (e) {
+      console.warn("[setWorkspaceId] Erro ao remover do sessionStorage:", e);
+    }
+    
+    try {
+      document.cookie = "x-workspace-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    } catch (e) {
+      console.warn("[setWorkspaceId] Erro ao remover cookie:", e);
+    }
   }
 }
 
