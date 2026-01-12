@@ -43,16 +43,46 @@ export function setWorkspaceId(workspaceId: string | null): void {
     expires.setDate(expires.getDate() + 30);
     const isSecure = window.location.protocol === "https:";
     
-    // No mobile, usar SameSite=None com Secure para funcionar em todos os contextos
-    // Se não for HTTPS, usar Lax
-    const sameSite = isSecure ? "None" : "Lax";
-    const secureFlag = isSecure ? "; Secure" : "";
+    // Tentar diferentes configurações de cookie para garantir compatibilidade mobile
+    // No mobile, cookies podem ter problemas com SameSite=None mesmo com Secure
+    let cookieSaved = false;
     
-    // Definir cookie com configuração otimizada para mobile
-    document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=${sameSite}${secureFlag}`;
+    // Tentar 1: SameSite=Lax (funciona na maioria dos casos)
+    const cookieValue1 = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+    document.cookie = cookieValue1;
     
-    // Log para debug (remover em produção se necessário)
-    console.log(`[setWorkspaceId] Workspace definido: ${workspaceId.substring(0, 8)}... (Secure: ${isSecure}, SameSite: ${sameSite})`);
+    // Verificar se foi salvo
+    const verifyCookie = document.cookie.match(/x-workspace-id=([^;]+)/);
+    cookieSaved = verifyCookie && decodeURIComponent(verifyCookie[1]) === workspaceId;
+    
+    // Tentar 2: Se não funcionou e é HTTPS, tentar com Secure
+    if (!cookieSaved && isSecure) {
+      const cookieValue2 = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=Lax; Secure`;
+      document.cookie = cookieValue2;
+      const verifyCookie2 = document.cookie.match(/x-workspace-id=([^;]+)/);
+      cookieSaved = verifyCookie2 && decodeURIComponent(verifyCookie2[1]) === workspaceId;
+    }
+    
+    // Tentar 3: Sem SameSite (fallback)
+    if (!cookieSaved) {
+      const cookieValue3 = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}`;
+      document.cookie = cookieValue3;
+      const verifyCookie3 = document.cookie.match(/x-workspace-id=([^;]+)/);
+      cookieSaved = verifyCookie3 && decodeURIComponent(verifyCookie3[1]) === workspaceId;
+    }
+    
+    // Log para debug
+    const finalCookie = document.cookie.match(/x-workspace-id=([^;]+)/);
+    console.log(`[setWorkspaceId] Workspace definido: ${workspaceId.substring(0, 8)}...`, {
+      secure: isSecure,
+      cookieSaved,
+      cookieValue: finalCookie ? decodeURIComponent(finalCookie[1]).substring(0, 8) : "não encontrado",
+      allCookies: document.cookie.split(';').filter(c => c.includes('workspace')),
+    });
+    
+    if (!cookieSaved) {
+      console.error(`[setWorkspaceId] ❌ Cookie não foi salvo após 3 tentativas! O workspace será enviado apenas via header.`);
+    }
     
   } else {
     try {
@@ -174,13 +204,22 @@ async function fetchAPI<T>(
   const headers = baseHeaders;
 
   try {
+    // Verificar novamente se o workspace está no header antes de enviar
+    const finalWorkspaceId = headers["x-workspace-id"] || workspaceId;
+    
     console.log(`[fetchAPI] 🚀 Fazendo requisição para ${url}`, {
       method: options?.method || "GET",
-      hasWorkspace: !!workspaceId,
-      workspaceValue: workspaceId ? `${workspaceId.substring(0, 8)}...` : null,
+      hasWorkspace: !!finalWorkspaceId,
+      workspaceValue: finalWorkspaceId ? `${finalWorkspaceId.substring(0, 8)}...` : null,
       headers: Object.keys(headers),
-      headerValues: Object.entries(headers).map(([k, v]) => ({ [k]: typeof v === 'string' ? v.substring(0, 20) : v })),
+      xWorkspaceIdHeader: headers["x-workspace-id"] ? `${headers["x-workspace-id"].substring(0, 8)}...` : "AUSENTE",
     });
+    
+    // Garantir que o workspace esteja no header mesmo que tenha sido perdido na mesclagem
+    if (finalWorkspaceId && !headers["x-workspace-id"]) {
+      headers["x-workspace-id"] = finalWorkspaceId;
+      console.log(`[fetchAPI] ⚠️ Workspace foi adicionado ao header novamente`);
+    }
     
     // Criar objeto de fetch options garantindo que headers sejam mesclados corretamente
     const fetchOptions: RequestInit = {
@@ -189,6 +228,13 @@ async function fetchAPI<T>(
       cache: "no-store",
       headers: headers, // Headers já preparados com workspace
     };
+    
+    // Log final dos headers que serão enviados
+    if (fetchOptions.headers instanceof Headers) {
+      console.log(`[fetchAPI] Headers finais (Headers object):`, Array.from(fetchOptions.headers.entries()));
+    } else {
+      console.log(`[fetchAPI] Headers finais (object):`, fetchOptions.headers);
+    }
     
     const response = await fetch(url, fetchOptions);
 
