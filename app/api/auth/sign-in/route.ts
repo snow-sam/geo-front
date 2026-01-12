@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const origin = await getOrigin();
+    const headersList = await headers();
+    const protocol = headersList.get("x-forwarded-proto") || "http";
 
     const response = await fetch(`${AUTH_API_URL}/sign-in/email`, {
       method: "POST",
@@ -51,10 +53,17 @@ export async function POST(request: NextRequest) {
           ? parseInt(maxAgePart.split("=")[1])
           : 60 * 60 * 24 * 7; // 7 dias default
 
+        // Determinar SameSite baseado no ambiente
+        // Em produção com HTTPS, usar "none" para melhor compatibilidade mobile
+        // Em desenvolvimento, usar "lax"
+        const isProduction = process.env.NODE_ENV === "production";
+        const isSecure = protocol === "https";
+        const sameSite = isProduction && isSecure ? "none" : "lax";
+        
         nextResponse.cookies.set(name, value, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
+          secure: isProduction && isSecure,
+          sameSite: sameSite as "lax" | "none" | "strict",
           path: "/",
           maxAge,
         });

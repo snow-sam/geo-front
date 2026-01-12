@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Route, Calendar, AlertCircle, Loader2 } from "lucide-react";
+import { Route, Calendar, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { getTecnicoMe, getTecnicoRoteiros } from "@/lib/api";
 import { RoteiroView } from "@/components/tecnico-portal/roteiro-view";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { Roteiro } from "@/types/roteiro";
 import type { Tecnico } from "@/types/tecnico";
 
@@ -33,32 +34,59 @@ export default function TecnicoPortalPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setIsLoading(true);
-        setError(null);
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        // Buscar técnico e roteiros em paralelo usando endpoints dedicados
-        // O filtro por tecnicoId é automático (pela sessão)
-        const [tecnicoData, roteirosData] = await Promise.all([
-          getTecnicoMe(),
-          getTecnicoRoteiros(),
-        ]);
+      // Buscar técnico e roteiros em paralelo usando endpoints dedicados
+      // O filtro por tecnicoId é automático (pela sessão)
+      const [tecnicoData, roteirosData] = await Promise.all([
+        getTecnicoMe(),
+        getTecnicoRoteiros(),
+      ]);
 
-        setTecnico(tecnicoData);
-        setRoteiros(roteirosData);
-        
-      } catch (err) {
-        console.error("[Portal Técnico] Erro ao carregar dados:", err);
-        setError("Seu usuário não está vinculado a um técnico. Contate o administrador.");
-      } finally {
-        setIsLoading(false);
+      setTecnico(tecnicoData);
+      setRoteiros(roteirosData);
+      
+    } catch (err: unknown) {
+      console.error("[Portal Técnico] Erro ao carregar dados:", err);
+      
+      // Tratamento de erros mais específico
+      let errorMessage = "Erro ao carregar dados. Tente novamente.";
+      
+      if (err instanceof Error) {
+        // Verificar se é erro de autenticação (401/403)
+        if (err.message.includes("401") || err.message.includes("403") || err.message.includes("não autorizado")) {
+          errorMessage = "Sessão expirada. Por favor, faça login novamente.";
+        } 
+        // Verificar se é erro de rede
+        else if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("Erro ao conectar")) {
+          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+        }
+        // Verificar se é erro 404 (técnico não encontrado)
+        else if (err.message.includes("404") || err.message.includes("não encontrado")) {
+          errorMessage = "Seu usuário não está vinculado a um técnico. Contate o administrador.";
+        }
+        // Verificar se é erro do servidor
+        else if (err.message.includes("500") || err.message.includes("servidor")) {
+          errorMessage = "Erro no servidor. Tente novamente em alguns instantes.";
+        }
+        // Usar mensagem do erro se disponível
+        else if (err.message && err.message !== "Erro desconhecido") {
+          errorMessage = err.message;
+        }
       }
+      
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Separar roteiro de hoje dos demais
   const { roteiroHoje, outrosRoteiros } = useMemo(() => {
@@ -85,12 +113,43 @@ export default function TecnicoPortalPage() {
   }
 
   if (error) {
+    const isSessionError = error.includes("Sessão expirada") || error.includes("não autorizado");
+    
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="bg-red-900/20 border-red-500/50 max-w-md">
-          <CardContent className="pt-6 text-center">
+          <CardContent className="pt-6 text-center space-y-4">
             <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
             <p className="text-red-400">{error}</p>
+            {!isSessionError && (
+              <Button
+                onClick={loadData}
+                variant="outline"
+                className="mt-4"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Tentar novamente
+                  </>
+                )}
+              </Button>
+            )}
+            {isSessionError && (
+              <Button
+                onClick={() => router.push("/tecnico/login")}
+                variant="outline"
+                className="mt-4"
+              >
+                Ir para login
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

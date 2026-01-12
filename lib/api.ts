@@ -68,16 +68,39 @@ async function fetchAPI<T>(
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: "Erro desconhecido",
-      }));
-      throw new Error(error.message || `Erro HTTP: ${response.status}`);
+      let errorMessage = `Erro HTTP: ${response.status}`;
+      
+      try {
+        const error = await response.json();
+        errorMessage = error.message || error.error?.message || errorMessage;
+      } catch {
+        // Se não conseguir parsear JSON, usar mensagem padrão baseada no status
+        if (response.status === 401) {
+          errorMessage = "Não autorizado. Faça login novamente.";
+        } else if (response.status === 403) {
+          errorMessage = "Acesso negado.";
+        } else if (response.status === 404) {
+          errorMessage = "Recurso não encontrado.";
+        } else if (response.status === 500) {
+          errorMessage = "Erro no servidor. Tente novamente.";
+        }
+      }
+      
+      const error = new Error(errorMessage);
+      (error as Error & { status?: number }).status = response.status;
+      throw error;
     }
     const text = await response.text();
     const data = text ? JSON.parse(text) : null;
     return data;
   } catch (error) {
     console.error(`Erro ao buscar ${endpoint}:`, error);
+    
+    // Se for um erro de rede, criar mensagem mais amigável
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error("Erro de conexão. Verifique sua internet e tente novamente.");
+    }
+    
     throw error;
   }
 }
