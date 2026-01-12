@@ -82,6 +82,8 @@ async function fetchAPI<T>(
   // Isso é crítico no mobile onde o workspace pode não estar definido ainda
   if (!workspaceId && typeof window !== "undefined") {
     try {
+      console.log(`[fetchAPI] Workspace não encontrado, buscando da sessão para ${endpoint}...`);
+      
       // Fazer requisição síncrona para buscar workspace antes de continuar
       const sessionRes = await fetch("/api/auth/session", { 
         credentials: "include",
@@ -90,42 +92,105 @@ async function fetchAPI<T>(
       
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
+        console.log(`[fetchAPI] Dados da sessão:`, {
+          hasSession: !!sessionData?.session,
+          activeOrgId: sessionData?.session?.activeOrganizationId,
+        });
+        
         if (sessionData?.session?.activeOrganizationId) {
           workspaceId = sessionData.session.activeOrganizationId;
           // Definir imediatamente para próximas requisições
           setWorkspaceId(workspaceId);
-          console.log(`[fetchAPI] Workspace obtido da sessão: ${workspaceId.substring(0, 8)}...`);
+          console.log(`[fetchAPI] ✅ Workspace obtido da sessão: ${workspaceId.substring(0, 8)}...`);
+        } else {
+          // Tentar buscar organizações se não houver workspace ativo
+          console.log(`[fetchAPI] Nenhum workspace ativo na sessão, buscando organizações...`);
+          try {
+            const { organizationClient } = await import("@/lib/organization-client");
+            const orgsResult = await organizationClient.list();
+            const orgsData = orgsResult.data 
+              ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
+              : [];
+            
+            if (orgsData.length > 0) {
+              const firstOrg = orgsData[0];
+              // Definir como ativa
+              await organizationClient.setActive({ organizationId: firstOrg.id });
+              workspaceId = firstOrg.id;
+              setWorkspaceId(workspaceId);
+              console.log(`[fetchAPI] ✅ Workspace obtido da primeira organização: ${workspaceId.substring(0, 8)}...`);
+            } else {
+              console.warn(`[fetchAPI] ⚠️ Nenhuma organização encontrada`);
+            }
+          } catch (orgError) {
+            console.warn(`[fetchAPI] Erro ao buscar organizações:`, orgError);
+          }
         }
+      } else {
+        console.warn(`[fetchAPI] Erro ao buscar sessão: ${sessionRes.status}`);
       }
     } catch (e) {
-      console.warn(`[fetchAPI] Erro ao buscar workspace da sessão para ${endpoint}:`, e);
+      console.error(`[fetchAPI] ❌ Erro ao buscar workspace da sessão para ${endpoint}:`, e);
     }
+  } else if (workspaceId) {
+    console.log(`[fetchAPI] ✅ Workspace encontrado no storage: ${workspaceId.substring(0, 8)}...`);
   }
 
   // Preparar headers garantindo que o workspace sempre seja enviado se disponível
-  const headers: HeadersInit = {
+  // IMPORTANTE: Mesclar headers corretamente para não perder valores importantes
+  const baseHeaders: HeadersInit = {
     "Content-Type": "application/json",
-    ...options?.headers,
   };
   
+  // Mesclar headers de options primeiro
+  if (options?.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        baseHeaders[key] = value;
+      });
+    } else {
+      Object.assign(baseHeaders, options.headers);
+    }
+  }
+  
   // SEMPRE enviar workspace no header se disponível (mais confiável que cookie no mobile)
+  // Isso sobrescreve qualquer valor anterior para garantir que o workspace correto seja enviado
   if (workspaceId) {
-    headers["x-workspace-id"] = workspaceId;
+    baseHeaders["x-workspace-id"] = workspaceId;
+    console.log(`[fetchAPI] 📤 Enviando workspace no header para ${endpoint}: ${workspaceId.substring(0, 8)}...`);
   } else {
     // Log de erro mais detalhado para debug
     console.error(`[fetchAPI] ⚠️ Workspace ID não encontrado para ${endpoint}`, {
       localStorage: typeof window !== "undefined" ? localStorage.getItem("activeWorkspaceId") : "N/A",
       cookie: typeof document !== "undefined" ? document.cookie.match(/x-workspace-id=([^;]+)/)?.[1] : "N/A",
+      url,
     });
+    
+    // Se não tiver workspace, ainda tentar fazer a requisição
+    // O backend pode ter uma forma alternativa de identificar o workspace
+    console.warn(`[fetchAPI] ⚠️ Continuando sem workspace - backend pode rejeitar`);
   }
+  
+  const headers = baseHeaders;
 
   try {
-    const response = await fetch(url, {
+    console.log(`[fetchAPI] 🚀 Fazendo requisição para ${url}`, {
+      method: options?.method || "GET",
+      hasWorkspace: !!workspaceId,
+      workspaceValue: workspaceId ? `${workspaceId.substring(0, 8)}...` : null,
+      headers: Object.keys(headers),
+      headerValues: Object.entries(headers).map(([k, v]) => ({ [k]: typeof v === 'string' ? v.substring(0, 20) : v })),
+    });
+    
+    // Criar objeto de fetch options garantindo que headers sejam mesclados corretamente
+    const fetchOptions: RequestInit = {
       ...options,
       credentials: "include",
-      headers,
       cache: "no-store",
-    });
+      headers: headers, // Headers já preparados com workspace
+    };
+    
+    const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
       let errorMessage = `Erro HTTP: ${response.status}`;

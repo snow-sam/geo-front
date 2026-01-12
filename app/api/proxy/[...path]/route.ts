@@ -27,10 +27,24 @@ async function proxyRequest(
   // Pegar workspace ID: primeiro do header, depois do cookie
   let workspaceId = request.headers.get("x-workspace-id");
   
+  // Log para debug
+  console.log(`[Proxy] Requisição para ${path}:`, {
+    hasHeader: !!request.headers.get("x-workspace-id"),
+    headerValue: request.headers.get("x-workspace-id")?.substring(0, 8) || null,
+    hasCookie: !!request.cookies.get("x-workspace-id"),
+    cookieValue: request.cookies.get("x-workspace-id")?.value?.substring(0, 8) || null,
+    allHeaders: Array.from(request.headers.entries()).filter(([k]) => k.toLowerCase().includes('workspace') || k.toLowerCase().includes('x-')),
+  });
+  
   // Se não estiver no header, tentar pegar do cookie
   if (!workspaceId) {
     const workspaceCookie = request.cookies.get("x-workspace-id");
     workspaceId = workspaceCookie?.value || null;
+    if (workspaceId) {
+      console.log(`[Proxy] ✅ Workspace obtido do cookie: ${workspaceId.substring(0, 8)}...`);
+    }
+  } else {
+    console.log(`[Proxy] ✅ Workspace obtido do header: ${workspaceId.substring(0, 8)}...`);
   }
   
   const origin = await getOrigin();
