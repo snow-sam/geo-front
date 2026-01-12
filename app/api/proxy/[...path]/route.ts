@@ -34,6 +34,7 @@ async function proxyRequest(
     hasCookie: !!request.cookies.get("x-workspace-id"),
     cookieValue: request.cookies.get("x-workspace-id")?.value?.substring(0, 8) || null,
     allHeaders: Array.from(request.headers.entries()).filter(([k]) => k.toLowerCase().includes('workspace') || k.toLowerCase().includes('x-')),
+    isTecnicoRoute: path.includes('tecnico'),
   });
   
   // Se não estiver no header, tentar pegar do cookie
@@ -42,6 +43,11 @@ async function proxyRequest(
     workspaceId = workspaceCookie?.value || null;
     if (workspaceId) {
       console.log(`[Proxy] ✅ Workspace obtido do cookie: ${workspaceId.substring(0, 8)}...`);
+    } else {
+      // Se for rota de técnico e não tiver workspace, logar para debug
+      if (path.includes('tecnico')) {
+        console.log(`[Proxy] ⚠️ Requisição de técnico sem workspace - backend pode identificar automaticamente`);
+      }
     }
   } else {
     console.log(`[Proxy] ✅ Workspace obtido do header: ${workspaceId.substring(0, 8)}...`);

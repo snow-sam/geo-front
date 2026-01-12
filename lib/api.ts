@@ -14,13 +14,28 @@ const API_URL = "/api/proxy";
 function getWorkspaceId(): string | null {
   if (typeof window === "undefined") return null;
   
-  // Primeiro tenta localStorage (mais atualizado)
-  const fromStorage = localStorage.getItem("activeWorkspaceId");
-  if (fromStorage) return fromStorage;
-  
-  // Fallback para cookie
-  const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
-  return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+  try {
+    // Primeiro tenta localStorage (mais atualizado)
+    const fromStorage = localStorage.getItem("activeWorkspaceId");
+    if (fromStorage) {
+      console.log(`[getWorkspaceId] ✅ Encontrado no localStorage: ${fromStorage.substring(0, 8)}...`);
+      return fromStorage;
+    }
+    
+    // Fallback para cookie
+    const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
+    if (cookieMatch) {
+      const cookieValue = decodeURIComponent(cookieMatch[1]);
+      console.log(`[getWorkspaceId] ✅ Encontrado no cookie: ${cookieValue.substring(0, 8)}...`);
+      return cookieValue;
+    }
+    
+    console.log(`[getWorkspaceId] ⚠️ Workspace não encontrado em localStorage nem cookie`);
+    return null;
+  } catch (e) {
+    console.warn(`[getWorkspaceId] Erro ao acessar storage:`, e);
+    return null;
+  }
 }
 
 /**
@@ -125,6 +140,7 @@ async function fetchAPI<T>(
         console.log(`[fetchAPI] Dados da sessão:`, {
           hasSession: !!sessionData?.session,
           activeOrgId: sessionData?.session?.activeOrganizationId,
+          userId: sessionData?.user?.id,
         });
         
         if (sessionData?.session?.activeOrganizationId) {
@@ -142,6 +158,8 @@ async function fetchAPI<T>(
               ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
               : [];
             
+            console.log(`[fetchAPI] Organizações encontradas:`, orgsData.length);
+            
             if (orgsData.length > 0) {
               const firstOrg = orgsData[0];
               // Definir como ativa
@@ -150,17 +168,37 @@ async function fetchAPI<T>(
               setWorkspaceId(workspaceId);
               console.log(`[fetchAPI] ✅ Workspace obtido da primeira organização: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
             } else {
-              console.warn(`[fetchAPI] ⚠️ Nenhuma organização encontrada`);
+              // Se for uma requisição de técnico e não houver organizações,
+              // tentar fazer a requisição sem workspace primeiro para ver se o backend retorna o workspace necessário
+              // ou se o backend identifica automaticamente pelo técnico
+              if (endpoint.includes('/tecnico/')) {
+                console.log(`[fetchAPI] ⚠️ Requisição de técnico sem workspace - backend pode identificar automaticamente`);
+                // Continuar sem workspace para ver se o backend aceita
+              } else {
+                console.warn(`[fetchAPI] ⚠️ Nenhuma organização encontrada`);
+              }
             }
           } catch (orgError) {
             console.warn(`[fetchAPI] Erro ao buscar organizações:`, orgError);
+            // Se for requisição de técnico, continuar mesmo sem workspace
+            if (endpoint.includes('/tecnico/')) {
+              console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico`);
+            }
           }
         }
       } else {
         console.warn(`[fetchAPI] Erro ao buscar sessão: ${sessionRes.status}`);
+        // Se for requisição de técnico, continuar mesmo sem workspace
+        if (endpoint.includes('/tecnico/')) {
+          console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico após erro na sessão`);
+        }
       }
     } catch (e) {
       console.error(`[fetchAPI] ❌ Erro ao buscar workspace da sessão para ${endpoint}:`, e);
+      // Se for requisição de técnico, continuar mesmo sem workspace
+      if (endpoint.includes('/tecnico/')) {
+        console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico após erro`);
+      }
     }
   } else if (workspaceId) {
     console.log(`[fetchAPI] ✅ Workspace encontrado no storage: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
@@ -259,6 +297,9 @@ async function fetchAPI<T>(
           // Tentar buscar workspace novamente se ainda não tiver
           if (typeof window !== "undefined" && !workspaceId) {
             try {
+              console.log(`[fetchAPI] 🔄 Tentando recuperar workspace após erro 400...`);
+              
+              // Tentar buscar da sessão novamente
               const sessionRes = await fetch("/api/auth/session", { 
                 credentials: "include",
                 cache: "no-store"
@@ -269,8 +310,30 @@ async function fetchAPI<T>(
                 if (sessionData?.session?.activeOrganizationId) {
                   const newWorkspaceId = sessionData.session.activeOrganizationId;
                   setWorkspaceId(newWorkspaceId);
-                  console.log(`[fetchAPI] Workspace recuperado após erro 400: ${newWorkspaceId.substring(0, 8)}...`);
+                  console.log(`[fetchAPI] ✅ Workspace recuperado após erro 400: ${newWorkspaceId.substring(0, 8)}...`);
                   // Não relançar erro, deixar o componente tentar novamente
+                } else {
+                  // Se for requisição de técnico e não houver workspace, tentar buscar organizações novamente
+                  if (endpoint.includes('/tecnico/')) {
+                    console.log(`[fetchAPI] 🔄 Tentando buscar organizações novamente para técnico...`);
+                    try {
+                      const { organizationClient } = await import("@/lib/organization-client");
+                      const orgsResult = await organizationClient.list();
+                      const orgsData = orgsResult.data 
+                        ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
+                        : [];
+                      
+                      if (orgsData.length > 0) {
+                        const firstOrg = orgsData[0];
+                        await organizationClient.setActive({ organizationId: firstOrg.id });
+                        const newWorkspaceId = firstOrg.id;
+                        setWorkspaceId(newWorkspaceId);
+                        console.log(`[fetchAPI] ✅ Workspace recuperado da organização após erro 400: ${newWorkspaceId.substring(0, 8)}...`);
+                      }
+                    } catch (e) {
+                      console.warn("[fetchAPI] Erro ao buscar organizações após erro 400:", e);
+                    }
+                  }
                 }
               }
             } catch (e) {
