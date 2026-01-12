@@ -174,13 +174,15 @@ async function fetchAPI<T>(
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
   
-  // Sempre tentar obter o workspace ID do localStorage primeiro
-  // Isso é mais confiável no mobile onde cookies podem não funcionar
+  // Sempre tentar obter o workspace ID do storage primeiro
   let workspaceId = getWorkspaceId();
   
-  // Se não encontrou, tentar buscar da sessão de forma síncrona antes da requisição
-  // Isso é crítico no mobile onde o workspace pode não estar definido ainda
-  if (!workspaceId && typeof window !== "undefined") {
+  // Para requisições de técnico, SEMPRE buscar da sessão se não tiver workspace
+  // Isso é crítico no mobile onde storage pode não funcionar
+  const isTecnicoRequest = endpoint.includes('/tecnico/');
+  const shouldFetchFromSession = !workspaceId || isTecnicoRequest;
+  
+  if (shouldFetchFromSession && typeof window !== "undefined") {
     try {
       console.log(`[fetchAPI] Workspace não encontrado, buscando da sessão para ${endpoint}...`);
       
@@ -276,16 +278,22 @@ async function fetchAPI<T>(
     }
   }
   
+  // CRÍTICO: Verificar novamente o workspace antes de adicionar ao header
+  // Pode ter sido atualizado durante a busca da sessão
+  const finalWorkspaceId = workspaceId || getWorkspaceId() || workspaceIdCache;
+  
   // SEMPRE enviar workspace no header se disponível (mais confiável que cookie no mobile)
   // Isso sobrescreve qualquer valor anterior para garantir que o workspace correto seja enviado
-  if (workspaceId) {
-    baseHeaders["x-workspace-id"] = workspaceId;
-    console.log(`[fetchAPI] 📤 Enviando workspace no header para ${endpoint}: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
+  if (finalWorkspaceId) {
+    baseHeaders["x-workspace-id"] = finalWorkspaceId;
+    console.log(`[fetchAPI] 📤 Enviando workspace no header para ${endpoint}: ${finalWorkspaceId.substring(0, 8)}...`);
   } else {
     // Log de erro mais detalhado para debug
     console.error(`[fetchAPI] ⚠️ Workspace ID não encontrado para ${endpoint}`, {
       localStorage: typeof window !== "undefined" ? localStorage.getItem("activeWorkspaceId") : "N/A",
+      sessionStorage: typeof window !== "undefined" ? sessionStorage.getItem("activeWorkspaceId") : "N/A",
       cookie: typeof document !== "undefined" ? document.cookie.match(/x-workspace-id=([^;]+)/)?.[1] : "N/A",
+      cache: workspaceIdCache || "N/A",
       url,
     });
     
@@ -297,22 +305,27 @@ async function fetchAPI<T>(
   const headers = baseHeaders;
 
   try {
-    // Verificar novamente se o workspace está no header antes de enviar
-    const finalWorkspaceId = headers["x-workspace-id"] || workspaceId;
+    // VERIFICAÇÃO FINAL: Garantir que o workspace esteja no header antes de enviar
+    const headerWorkspaceId = headers["x-workspace-id"] || finalWorkspaceId || getWorkspaceId() || workspaceIdCache;
+    
+    // Se ainda não estiver no header, adicionar agora
+    if (headerWorkspaceId && !headers["x-workspace-id"]) {
+      headers["x-workspace-id"] = headerWorkspaceId;
+      console.log(`[fetchAPI] ⚠️ Workspace foi adicionado ao header na última verificação: ${headerWorkspaceId.substring(0, 8)}...`);
+    }
     
     console.log(`[fetchAPI] 🚀 Fazendo requisição para ${url}`, {
       method: options?.method || "GET",
-      hasWorkspace: !!finalWorkspaceId,
-      workspaceValue: finalWorkspaceId ? `${finalWorkspaceId.substring(0, 8)}...` : null,
+      hasWorkspace: !!headerWorkspaceId,
+      workspaceValue: headerWorkspaceId ? `${String(headerWorkspaceId).substring(0, 8)}...` : null,
       headers: Object.keys(headers),
-      xWorkspaceIdHeader: headers["x-workspace-id"] ? `${headers["x-workspace-id"].substring(0, 8)}...` : "AUSENTE",
+      xWorkspaceIdHeader: headers["x-workspace-id"] ? `${String(headers["x-workspace-id"]).substring(0, 8)}...` : "AUSENTE",
+      allHeaderKeys: Object.keys(headers),
+      headerValues: Object.entries(headers).reduce((acc, [k, v]) => {
+        acc[k] = typeof v === 'string' ? v.substring(0, 20) : String(v);
+        return acc;
+      }, {} as Record<string, string>),
     });
-    
-    // Garantir que o workspace esteja no header mesmo que tenha sido perdido na mesclagem
-    if (finalWorkspaceId && !headers["x-workspace-id"]) {
-      headers["x-workspace-id"] = finalWorkspaceId;
-      console.log(`[fetchAPI] ⚠️ Workspace foi adicionado ao header novamente`);
-    }
     
     // Criar objeto de fetch options garantindo que headers sejam mesclados corretamente
     const fetchOptions: RequestInit = {
