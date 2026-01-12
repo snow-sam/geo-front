@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Route, Calendar, AlertCircle, Loader2, RefreshCw } from "lucide-react";
-import { getTecnicoMe, getTecnicoRoteiros } from "@/lib/api";
+import { getTecnicoMe, getTecnicoRoteiros, setWorkspaceId } from "@/lib/api";
+import { organizationClient } from "@/lib/organization-client";
 import { RoteiroView } from "@/components/tecnico-portal/roteiro-view";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,49 @@ export default function TecnicoPortalPage() {
     try {
       setIsLoading(true);
       setError(null);
+
+      // Garantir que o workspace ID está definido antes de fazer requisições
+      // Verificar se já existe no localStorage ou cookie
+      const getWorkspaceId = (): string | null => {
+        if (typeof window === "undefined") return null;
+        const fromStorage = localStorage.getItem("activeWorkspaceId");
+        if (fromStorage) return fromStorage;
+        const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
+        return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+      };
+
+      let workspaceId = getWorkspaceId();
+      
+      // Se não houver workspace, tentar buscar da sessão
+      if (!workspaceId) {
+        try {
+          const sessionRes = await fetch("/api/auth/session", { 
+            credentials: "include" 
+          });
+          const sessionData = await sessionRes.json();
+          
+          if (sessionData?.session?.activeOrganizationId) {
+            workspaceId = sessionData.session.activeOrganizationId;
+            setWorkspaceId(workspaceId);
+          } else {
+            // Tentar buscar a primeira organização
+            const orgsResult = await organizationClient.list();
+            const orgsData = orgsResult.data 
+              ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
+              : [];
+            
+            if (orgsData.length > 0) {
+              const firstOrg = orgsData[0];
+              await organizationClient.setActive({ organizationId: firstOrg.id });
+              workspaceId = firstOrg.id;
+              setWorkspaceId(workspaceId);
+            }
+          }
+        } catch (workspaceError) {
+          console.warn("[Portal Técnico] Erro ao definir workspace:", workspaceError);
+          // Continuar mesmo se houver erro ao definir workspace
+        }
+      }
 
       // Buscar técnico e roteiros em paralelo usando endpoints dedicados
       // O filtro por tecnicoId é automático (pela sessão)

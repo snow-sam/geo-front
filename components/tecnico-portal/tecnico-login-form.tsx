@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Mail, Lock, Truck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { setWorkspaceId } from "@/lib/api";
+import { organizationClient } from "@/lib/organization-client";
 
 import {
   Form,
@@ -62,6 +64,42 @@ export function TecnicoLoginForm() {
       if (!response.ok || result.error) {
         setError(result.error?.message || "Email ou senha inválidos");
         return;
+      }
+
+      // Buscar sessão para obter o workspace ID
+      try {
+        const sessionRes = await fetch("/api/auth/session", { 
+          credentials: "include" 
+        });
+        const sessionData = await sessionRes.json();
+        
+        let workspaceId: string | null = null;
+        
+        // Tentar obter o workspace ID da sessão
+        if (sessionData?.session?.activeOrganizationId) {
+          workspaceId = sessionData.session.activeOrganizationId;
+        } else {
+          // Se não houver workspace ativo, buscar a primeira organização
+          const orgsResult = await organizationClient.list();
+          const orgsData = orgsResult.data 
+            ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
+            : [];
+          
+          if (orgsData.length > 0) {
+            const firstOrg = orgsData[0];
+            // Definir como ativa
+            await organizationClient.setActive({ organizationId: firstOrg.id });
+            workspaceId = firstOrg.id;
+          }
+        }
+        
+        // Definir o workspace ID no localStorage e cookie
+        if (workspaceId) {
+          setWorkspaceId(workspaceId);
+        }
+      } catch (workspaceError) {
+        console.error("[TecnicoLogin] Erro ao definir workspace:", workspaceError);
+        // Continuar mesmo se houver erro ao definir workspace
       }
 
       const callbackUrl = searchParams.get("callbackUrl") || "/tecnico";

@@ -31,15 +31,27 @@ export function setWorkspaceId(workspaceId: string | null): void {
 
   if (workspaceId) {
     // Salvar no localStorage para client-side
-    localStorage.setItem("activeWorkspaceId", workspaceId);
+    try {
+      localStorage.setItem("activeWorkspaceId", workspaceId);
+    } catch (e) {
+      console.warn("[setWorkspaceId] Erro ao salvar no localStorage:", e);
+    }
     
-    // Salvar também como cookie para SSR
+    // Salvar também como cookie para SSR e requisições
+    // Usar configuração compatível com mobile
     const expires = new Date();
     expires.setDate(expires.getDate() + 30);
-    document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+    const isSecure = window.location.protocol === "https:";
+    const sameSite = isSecure ? "Lax" : "Lax"; // Lax funciona melhor em mobile
+    
+    document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=${sameSite}${isSecure ? "; Secure" : ""}`;
     
   } else {
-    localStorage.removeItem("activeWorkspaceId");
+    try {
+      localStorage.removeItem("activeWorkspaceId");
+    } catch (e) {
+      console.warn("[setWorkspaceId] Erro ao remover do localStorage:", e);
+    }
     document.cookie = "x-workspace-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }
 }
