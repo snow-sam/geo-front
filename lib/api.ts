@@ -42,9 +42,17 @@ export function setWorkspaceId(workspaceId: string | null): void {
     const expires = new Date();
     expires.setDate(expires.getDate() + 30);
     const isSecure = window.location.protocol === "https:";
-    const sameSite = isSecure ? "Lax" : "Lax"; // Lax funciona melhor em mobile
     
-    document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=${sameSite}${isSecure ? "; Secure" : ""}`;
+    // No mobile, usar SameSite=None com Secure para funcionar em todos os contextos
+    // Se não for HTTPS, usar Lax
+    const sameSite = isSecure ? "None" : "Lax";
+    const secureFlag = isSecure ? "; Secure" : "";
+    
+    // Definir cookie com configuração otimizada para mobile
+    document.cookie = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=${sameSite}${secureFlag}`;
+    
+    // Log para debug (remover em produção se necessário)
+    console.log(`[setWorkspaceId] Workspace definido: ${workspaceId.substring(0, 8)}... (Secure: ${isSecure}, SameSite: ${sameSite})`);
     
   } else {
     try {
@@ -65,22 +73,63 @@ async function fetchAPI<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  const workspaceId = getWorkspaceId();
+  
+  // Sempre tentar obter o workspace ID do localStorage primeiro
+  // Isso é mais confiável no mobile onde cookies podem não funcionar
+  let workspaceId = getWorkspaceId();
+  
+  // Se não encontrou, tentar buscar da sessão de forma síncrona antes da requisição
+  // Isso é crítico no mobile onde o workspace pode não estar definido ainda
+  if (!workspaceId && typeof window !== "undefined") {
+    try {
+      // Fazer requisição síncrona para buscar workspace antes de continuar
+      const sessionRes = await fetch("/api/auth/session", { 
+        credentials: "include",
+        cache: "no-store"
+      });
+      
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json();
+        if (sessionData?.session?.activeOrganizationId) {
+          workspaceId = sessionData.session.activeOrganizationId;
+          // Definir imediatamente para próximas requisições
+          setWorkspaceId(workspaceId);
+          console.log(`[fetchAPI] Workspace obtido da sessão: ${workspaceId.substring(0, 8)}...`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[fetchAPI] Erro ao buscar workspace da sessão para ${endpoint}:`, e);
+    }
+  }
+
+  // Preparar headers garantindo que o workspace sempre seja enviado se disponível
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options?.headers,
+  };
+  
+  // SEMPRE enviar workspace no header se disponível (mais confiável que cookie no mobile)
+  if (workspaceId) {
+    headers["x-workspace-id"] = workspaceId;
+  } else {
+    // Log de erro mais detalhado para debug
+    console.error(`[fetchAPI] ⚠️ Workspace ID não encontrado para ${endpoint}`, {
+      localStorage: typeof window !== "undefined" ? localStorage.getItem("activeWorkspaceId") : "N/A",
+      cookie: typeof document !== "undefined" ? document.cookie.match(/x-workspace-id=([^;]+)/)?.[1] : "N/A",
+    });
+  }
 
   try {
     const response = await fetch(url, {
       ...options,
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
-        ...options?.headers,
-      },
+      headers,
       cache: "no-store",
     });
 
     if (!response.ok) {
       let errorMessage = `Erro HTTP: ${response.status}`;
+      let isWorkspaceError = false;
       
       try {
         const error = await response.json();
@@ -90,14 +139,39 @@ async function fetchAPI<T>(
         if (response.status === 400 && (
           errorMessage.toLowerCase().includes("workspace") ||
           errorMessage.toLowerCase().includes("organization") ||
-          errorMessage.toLowerCase().includes("x-workspace-id")
+          errorMessage.toLowerCase().includes("x-workspace-id") ||
+          errorMessage.toLowerCase().includes("não informado")
         )) {
+          isWorkspaceError = true;
           errorMessage = "Workspace não definido. Recarregue a página.";
+          
+          // Tentar buscar workspace novamente se ainda não tiver
+          if (typeof window !== "undefined" && !workspaceId) {
+            try {
+              const sessionRes = await fetch("/api/auth/session", { 
+                credentials: "include",
+                cache: "no-store"
+              });
+              
+              if (sessionRes.ok) {
+                const sessionData = await sessionRes.json();
+                if (sessionData?.session?.activeOrganizationId) {
+                  const newWorkspaceId = sessionData.session.activeOrganizationId;
+                  setWorkspaceId(newWorkspaceId);
+                  console.log(`[fetchAPI] Workspace recuperado após erro 400: ${newWorkspaceId.substring(0, 8)}...`);
+                  // Não relançar erro, deixar o componente tentar novamente
+                }
+              }
+            } catch (e) {
+              console.warn("[fetchAPI] Erro ao recuperar workspace após erro 400:", e);
+            }
+          }
         }
       } catch {
         // Se não conseguir parsear JSON, usar mensagem padrão baseada no status
         if (response.status === 400) {
           errorMessage = "Requisição inválida. Verifique se o workspace está definido.";
+          isWorkspaceError = true;
         } else if (response.status === 401) {
           errorMessage = "Não autorizado. Faça login novamente.";
         } else if (response.status === 403) {
@@ -110,7 +184,8 @@ async function fetchAPI<T>(
       }
       
       const error = new Error(errorMessage);
-      (error as Error & { status?: number }).status = response.status;
+      (error as Error & { status?: number; isWorkspaceError?: boolean }).status = response.status;
+      (error as Error & { status?: number; isWorkspaceError?: boolean }).isWorkspaceError = isWorkspaceError;
       throw error;
     }
     const text = await response.text();
