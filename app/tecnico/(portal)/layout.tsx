@@ -1,5 +1,6 @@
 import { TecnicoSidebar } from "@/components/tecnico-portal/tecnico-sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { DebugConsole } from "@/components/debug-console";
 
 export default function TecnicoPortalLayout({
   children,
@@ -17,9 +18,10 @@ export default function TecnicoPortalLayout({
               Portal do Técnico
             </h2>
           </div>
-          <div className="p-6">{children}</div>
+          <div className="p-6 pb-32">{children}</div>
         </main>
       </div>
+      <DebugConsole />
     </SidebarProvider>
   );
 }
