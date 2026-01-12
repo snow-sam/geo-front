@@ -53,14 +53,14 @@ export function setWorkspaceId(workspaceId: string | null): void {
     
     // Verificar se foi salvo
     const verifyCookie = document.cookie.match(/x-workspace-id=([^;]+)/);
-    cookieSaved = verifyCookie && decodeURIComponent(verifyCookie[1]) === workspaceId;
+    cookieSaved = !!(verifyCookie && decodeURIComponent(verifyCookie[1]) === workspaceId);
     
     // Tentar 2: Se não funcionou e é HTTPS, tentar com Secure
     if (!cookieSaved && isSecure) {
       const cookieValue2 = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}; SameSite=Lax; Secure`;
       document.cookie = cookieValue2;
       const verifyCookie2 = document.cookie.match(/x-workspace-id=([^;]+)/);
-      cookieSaved = verifyCookie2 && decodeURIComponent(verifyCookie2[1]) === workspaceId;
+      cookieSaved = !!(verifyCookie2 && decodeURIComponent(verifyCookie2[1]) === workspaceId);
     }
     
     // Tentar 3: Sem SameSite (fallback)
@@ -68,7 +68,7 @@ export function setWorkspaceId(workspaceId: string | null): void {
       const cookieValue3 = `x-workspace-id=${encodeURIComponent(workspaceId)}; path=/; expires=${expires.toUTCString()}`;
       document.cookie = cookieValue3;
       const verifyCookie3 = document.cookie.match(/x-workspace-id=([^;]+)/);
-      cookieSaved = verifyCookie3 && decodeURIComponent(verifyCookie3[1]) === workspaceId;
+      cookieSaved = !!(verifyCookie3 && decodeURIComponent(verifyCookie3[1]) === workspaceId);
     }
     
     // Log para debug
@@ -131,7 +131,7 @@ async function fetchAPI<T>(
           workspaceId = sessionData.session.activeOrganizationId;
           // Definir imediatamente para próximas requisições
           setWorkspaceId(workspaceId);
-          console.log(`[fetchAPI] ✅ Workspace obtido da sessão: ${workspaceId.substring(0, 8)}...`);
+          console.log(`[fetchAPI] ✅ Workspace obtido da sessão: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
         } else {
           // Tentar buscar organizações se não houver workspace ativo
           console.log(`[fetchAPI] Nenhum workspace ativo na sessão, buscando organizações...`);
@@ -148,7 +148,7 @@ async function fetchAPI<T>(
               await organizationClient.setActive({ organizationId: firstOrg.id });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
-              console.log(`[fetchAPI] ✅ Workspace obtido da primeira organização: ${workspaceId.substring(0, 8)}...`);
+              console.log(`[fetchAPI] ✅ Workspace obtido da primeira organização: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
             } else {
               console.warn(`[fetchAPI] ⚠️ Nenhuma organização encontrada`);
             }
@@ -163,7 +163,7 @@ async function fetchAPI<T>(
       console.error(`[fetchAPI] ❌ Erro ao buscar workspace da sessão para ${endpoint}:`, e);
     }
   } else if (workspaceId) {
-    console.log(`[fetchAPI] ✅ Workspace encontrado no storage: ${workspaceId.substring(0, 8)}...`);
+    console.log(`[fetchAPI] ✅ Workspace encontrado no storage: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
   }
 
   // Preparar headers garantindo que o workspace sempre seja enviado se disponível
@@ -187,7 +187,7 @@ async function fetchAPI<T>(
   // Isso sobrescreve qualquer valor anterior para garantir que o workspace correto seja enviado
   if (workspaceId) {
     baseHeaders["x-workspace-id"] = workspaceId;
-    console.log(`[fetchAPI] 📤 Enviando workspace no header para ${endpoint}: ${workspaceId.substring(0, 8)}...`);
+    console.log(`[fetchAPI] 📤 Enviando workspace no header para ${endpoint}: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
   } else {
     // Log de erro mais detalhado para debug
     console.error(`[fetchAPI] ⚠️ Workspace ID não encontrado para ${endpoint}`, {
