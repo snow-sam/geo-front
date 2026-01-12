@@ -44,8 +44,12 @@ export default function TecnicoPortalPage() {
       // Verificar se já existe no localStorage ou cookie
       const getWorkspaceId = (): string | null => {
         if (typeof window === "undefined") return null;
-        const fromStorage = localStorage.getItem("activeWorkspaceId");
-        if (fromStorage) return fromStorage;
+        try {
+          const fromStorage = localStorage.getItem("activeWorkspaceId");
+          if (fromStorage) return fromStorage;
+        } catch (e) {
+          console.warn("[Portal Técnico] Erro ao acessar localStorage:", e);
+        }
         const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
         return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
       };
@@ -58,11 +62,17 @@ export default function TecnicoPortalPage() {
           const sessionRes = await fetch("/api/auth/session", { 
             credentials: "include" 
           });
+          
+          if (!sessionRes.ok) {
+            throw new Error("Erro ao buscar sessão");
+          }
+          
           const sessionData = await sessionRes.json();
           
           if (sessionData?.session?.activeOrganizationId) {
             workspaceId = sessionData.session.activeOrganizationId;
             setWorkspaceId(workspaceId);
+            console.log("[Portal Técnico] Workspace definido da sessão:", workspaceId);
           } else {
             // Tentar buscar a primeira organização
             const orgsResult = await organizationClient.list();
@@ -75,12 +85,24 @@ export default function TecnicoPortalPage() {
               await organizationClient.setActive({ organizationId: firstOrg.id });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
+              console.log("[Portal Técnico] Workspace definido da primeira organização:", workspaceId);
+            } else {
+              console.warn("[Portal Técnico] Nenhuma organização encontrada");
             }
           }
         } catch (workspaceError) {
-          console.warn("[Portal Técnico] Erro ao definir workspace:", workspaceError);
-          // Continuar mesmo se houver erro ao definir workspace
+          console.error("[Portal Técnico] Erro ao definir workspace:", workspaceError);
+          // Se não conseguir definir workspace, ainda tentar fazer as requisições
+          // O backend pode ter uma forma alternativa de identificar o workspace
         }
+      } else {
+        console.log("[Portal Técnico] Workspace já definido:", workspaceId);
+      }
+
+      // Aguardar um pouco para garantir que o cookie foi definido
+      // Isso é importante especialmente em mobile onde pode haver delay
+      if (workspaceId) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // Buscar técnico e roteiros em paralelo usando endpoints dedicados
@@ -99,28 +121,36 @@ export default function TecnicoPortalPage() {
       // Tratamento de erros mais específico
       let errorMessage = "Erro ao carregar dados. Tente novamente.";
       
-      if (err instanceof Error) {
-        // Verificar se é erro de autenticação (401/403)
-        if (err.message.includes("401") || err.message.includes("403") || err.message.includes("não autorizado")) {
-          errorMessage = "Sessão expirada. Por favor, faça login novamente.";
-        } 
-        // Verificar se é erro de rede
-        else if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("Erro ao conectar")) {
-          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+        if (err instanceof Error) {
+          // Verificar se é erro relacionado a workspace
+          if (err.message.includes("workspace") || err.message.includes("Workspace não definido")) {
+            errorMessage = "Workspace não definido. Recarregue a página ou faça login novamente.";
+          }
+          // Verificar se é erro de autenticação (401/403)
+          else if (err.message.includes("401") || err.message.includes("403") || err.message.includes("não autorizado")) {
+            errorMessage = "Sessão expirada. Por favor, faça login novamente.";
+          } 
+          // Verificar se é erro 400 (bad request)
+          else if (err.message.includes("400") || err.message.includes("Requisição inválida")) {
+            errorMessage = "Erro na requisição. Verifique se o workspace está definido e tente novamente.";
+          }
+          // Verificar se é erro de rede
+          else if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("Erro ao conectar")) {
+            errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+          }
+          // Verificar se é erro 404 (técnico não encontrado)
+          else if (err.message.includes("404") || err.message.includes("não encontrado")) {
+            errorMessage = "Seu usuário não está vinculado a um técnico. Contate o administrador.";
+          }
+          // Verificar se é erro do servidor
+          else if (err.message.includes("500") || err.message.includes("servidor")) {
+            errorMessage = "Erro no servidor. Tente novamente em alguns instantes.";
+          }
+          // Usar mensagem do erro se disponível
+          else if (err.message && err.message !== "Erro desconhecido") {
+            errorMessage = err.message;
+          }
         }
-        // Verificar se é erro 404 (técnico não encontrado)
-        else if (err.message.includes("404") || err.message.includes("não encontrado")) {
-          errorMessage = "Seu usuário não está vinculado a um técnico. Contate o administrador.";
-        }
-        // Verificar se é erro do servidor
-        else if (err.message.includes("500") || err.message.includes("servidor")) {
-          errorMessage = "Erro no servidor. Tente novamente em alguns instantes.";
-        }
-        // Usar mensagem do erro se disponível
-        else if (err.message && err.message !== "Erro desconhecido") {
-          errorMessage = err.message;
-        }
-      }
       
       setError(errorMessage);
     } finally {
@@ -158,6 +188,28 @@ export default function TecnicoPortalPage() {
 
   if (error) {
     const isSessionError = error.includes("Sessão expirada") || error.includes("não autorizado");
+    const isWorkspaceError = error.includes("workspace") || error.includes("Workspace");
+    
+    const handleRetry = async () => {
+      // Se for erro de workspace, limpar e tentar redefinir
+      if (isWorkspaceError) {
+        try {
+          // Limpar workspace atual
+          setWorkspaceId(null);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("activeWorkspaceId");
+          }
+          
+          // Aguardar um pouco antes de tentar novamente
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (e) {
+          console.warn("[Portal Técnico] Erro ao limpar workspace:", e);
+        }
+      }
+      
+      // Tentar carregar novamente
+      await loadData();
+    };
     
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -167,7 +219,7 @@ export default function TecnicoPortalPage() {
             <p className="text-red-400">{error}</p>
             {!isSessionError && (
               <Button
-                onClick={loadData}
+                onClick={handleRetry}
                 variant="outline"
                 className="mt-4"
                 disabled={isLoading}

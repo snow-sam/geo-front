@@ -85,9 +85,20 @@ async function fetchAPI<T>(
       try {
         const error = await response.json();
         errorMessage = error.message || error.error?.message || errorMessage;
+        
+        // Verificar se o erro é relacionado a workspace ausente
+        if (response.status === 400 && (
+          errorMessage.toLowerCase().includes("workspace") ||
+          errorMessage.toLowerCase().includes("organization") ||
+          errorMessage.toLowerCase().includes("x-workspace-id")
+        )) {
+          errorMessage = "Workspace não definido. Recarregue a página.";
+        }
       } catch {
         // Se não conseguir parsear JSON, usar mensagem padrão baseada no status
-        if (response.status === 401) {
+        if (response.status === 400) {
+          errorMessage = "Requisição inválida. Verifique se o workspace está definido.";
+        } else if (response.status === 401) {
           errorMessage = "Não autorizado. Faça login novamente.";
         } else if (response.status === 403) {
           errorMessage = "Acesso negado.";

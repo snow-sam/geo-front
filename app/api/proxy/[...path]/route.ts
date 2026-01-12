@@ -24,8 +24,15 @@ async function proxyRequest(
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
 
-  // Pegar headers customizados
-  const workspaceId = request.headers.get("x-workspace-id");
+  // Pegar workspace ID: primeiro do header, depois do cookie
+  let workspaceId = request.headers.get("x-workspace-id");
+  
+  // Se não estiver no header, tentar pegar do cookie
+  if (!workspaceId) {
+    const workspaceCookie = request.cookies.get("x-workspace-id");
+    workspaceId = workspaceCookie?.value || null;
+  }
+  
   const origin = await getOrigin();
 
   // Construir URL de destino
@@ -40,6 +47,9 @@ async function proxyRequest(
 
   if (workspaceId) {
     headers["x-workspace-id"] = workspaceId;
+  } else {
+    // Log para debug - remover em produção se necessário
+    console.log(`[Proxy] Workspace ID ausente para ${path}`);
   }
 
   // Preparar body para métodos que suportam
@@ -66,6 +76,15 @@ async function proxyRequest(
 
     // Copiar resposta
     const responseData = await response.text();
+    
+    // Log para debug em caso de erro 400
+    if (response.status === 400) {
+      console.log(`[Proxy] Erro 400 em ${path}:`, {
+        workspaceId,
+        hasCookie: !!request.cookies.get("x-workspace-id"),
+        hasHeader: !!request.headers.get("x-workspace-id"),
+      });
+    }
     
     return new NextResponse(responseData, {
       status: response.status,
