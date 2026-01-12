@@ -44,9 +44,59 @@ async function proxyRequest(
     if (workspaceId) {
       console.log(`[Proxy] ✅ Workspace obtido do cookie: ${workspaceId.substring(0, 8)}...`);
     } else {
-      // Se for rota de técnico e não tiver workspace, logar para debug
+      // Se for rota de técnico e não tiver workspace, tentar obter através de uma requisição especial
       if (path.includes('tecnico')) {
-        console.log(`[Proxy] ⚠️ Requisição de técnico sem workspace - backend pode identificar automaticamente`);
+        console.log(`[Proxy] ⚠️ Requisição de técnico sem workspace - tentando obter através do técnico...`);
+        
+        // Tentar fazer uma requisição ao /tecnico/me sem workspace para ver se o backend retorna o workspace necessário
+        // Nota: Isso pode não funcionar se o backend realmente exigir o workspace, mas tentamos mesmo assim
+        try {
+          const tecnicoMeUrl = `${API_URL}/tecnico/me`;
+          const tecnicoMeResponse = await fetch(tecnicoMeUrl, {
+            method: "GET",
+            headers: {
+              Cookie: cookieHeader,
+              Origin: origin,
+              // Não enviar x-workspace-id para ver se o backend retorna o workspace necessário
+            },
+            credentials: "include",
+          });
+          
+          if (tecnicoMeResponse.ok) {
+            const tecnicoData = await tecnicoMeResponse.json();
+            // Verificar se o técnico tem campo de workspace
+            if (tecnicoData?.workspaceId) {
+              workspaceId = tecnicoData.workspaceId;
+              console.log(`[Proxy] ✅ Workspace obtido do técnico: ${workspaceId.substring(0, 8)}...`);
+            } else if (tecnicoData?.organizationId) {
+              workspaceId = tecnicoData.organizationId;
+              console.log(`[Proxy] ✅ Workspace obtido do técnico (organizationId): ${workspaceId.substring(0, 8)}...`);
+            } else if (tecnicoData?.workspace?.id) {
+              workspaceId = tecnicoData.workspace.id;
+              console.log(`[Proxy] ✅ Workspace obtido do técnico (workspace.id): ${workspaceId.substring(0, 8)}...`);
+            } else {
+              console.log(`[Proxy] ⚠️ Técnico não contém workspace - backend pode identificar automaticamente`);
+            }
+          } else if (tecnicoMeResponse.status === 400) {
+            // Se der erro 400, pode ser que o backend retorne o workspace necessário na mensagem de erro
+            try {
+              const errorData = await tecnicoMeResponse.json();
+              if (errorData?.requiredWorkspaceId || errorData?.workspaceId) {
+                workspaceId = errorData.requiredWorkspaceId || errorData.workspaceId;
+                console.log(`[Proxy] ✅ Workspace obtido da mensagem de erro: ${workspaceId.substring(0, 8)}...`);
+              } else {
+                console.log(`[Proxy] ⚠️ Erro 400 ao buscar técnico - backend pode identificar automaticamente pelo token`);
+              }
+            } catch {
+              console.log(`[Proxy] ⚠️ Erro ao parsear resposta de erro - continuando sem workspace`);
+            }
+          } else {
+            console.log(`[Proxy] ⚠️ Erro ${tecnicoMeResponse.status} ao buscar técnico - continuando sem workspace`);
+          }
+        } catch (e) {
+          console.warn(`[Proxy] Erro ao tentar obter workspace do técnico:`, e);
+          console.log(`[Proxy] ⚠️ Continuando sem workspace - backend pode identificar automaticamente`);
+        }
       }
     }
   } else {
