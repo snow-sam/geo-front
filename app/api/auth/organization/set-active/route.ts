@@ -23,6 +23,12 @@ export async function POST(request: NextRequest) {
 
     const origin = await getOrigin();
 
+    // Garantir que organizationId e organizationSlug estão presentes
+    const requestBody = {
+      organizationId: body.organizationId,
+      organizationSlug: body.organizationSlug,
+    };
+
     const response = await fetch(`${AUTH_API_URL}/organization/set-active`, {
       method: "POST",
       headers: {
@@ -30,7 +36,7 @@ export async function POST(request: NextRequest) {
         Cookie: cookieHeader,
         Origin: origin,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();
