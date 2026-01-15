@@ -174,7 +174,7 @@ async function getTecnicoWorkspace(): Promise<string | null> {
     // Método 2: Tentar fazer requisição ao /tecnico/me sem workspace
     // O backend pode retornar o workspace necessário no próprio técnico
     try {
-      const tecnicoRes = await fetch("/api/auth/me", {
+      const tecnicoRes = await fetch("/api/tecnico/me", {
         credentials: "include",
         cache: "no-store",
         headers: {
