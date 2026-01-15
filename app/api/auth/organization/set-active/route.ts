@@ -21,24 +21,7 @@ export async function POST(request: NextRequest) {
       .map((cookie) => `${cookie.name}=${cookie.value}`)
       .join("; ");
 
-    // Tentar obter o Origin do request original do cliente
-    // Se não houver, usar variável de ambiente ou origin do servidor
-    let origin: string;
-    const clientOrigin = request.headers.get("origin");
-    const referer = request.headers.get("referer");
-    
-    if (clientOrigin) {
-      origin = clientOrigin;
-    } else if (referer) {
-      try {
-        origin = new URL(referer).origin;
-      } catch {
-        origin = await getOrigin();
-      }
-    } else {
-      // Usar variável de ambiente se disponível, senão usar origin do servidor
-      origin = process.env.NEXT_PUBLIC_FRONTEND_URL || await getOrigin();
-    }
+    const origin = await getOrigin();
 
     // Garantir que organizationId e organizationSlug estão presentes
     const requestBody = {
