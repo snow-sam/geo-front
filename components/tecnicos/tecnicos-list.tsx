@@ -73,7 +73,6 @@ export function TecnicosList({ initialTecnicos }: TecnicosListProps) {
       await deleteTecnico(id);
       setTecnicos((prev) => prev.filter((t) => t.id !== id));
     } catch (error) {
-      console.error("Erro ao deletar técnico:", error);
       alert("Erro ao deletar técnico. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -95,7 +94,6 @@ export function TecnicosList({ initialTecnicos }: TecnicosListProps) {
       setTecnicos((prev) => [newTecnico, ...prev]);
       setIsCreateDialogOpen(false);
     } catch (error) {
-      console.error("Erro ao criar técnico:", error);
       alert("Erro ao criar técnico. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -114,7 +112,6 @@ export function TecnicosList({ initialTecnicos }: TecnicosListProps) {
       setIsEditDialogOpen(false);
       setSelectedTecnico(null);
     } catch (error) {
-      console.error("Erro ao atualizar técnico:", error);
       alert("Erro ao atualizar técnico. Tente novamente.");
     } finally {
       setIsLoading(false);

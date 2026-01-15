@@ -20,7 +20,7 @@ function hasSessionCookie(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Ignorar arquivos estáticos e API routes
+  // Ignorar arquivos estáticos
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||

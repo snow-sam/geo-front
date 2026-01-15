@@ -129,7 +129,6 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
 
   const handleDelete = (id: string) => {
     // TODO: Implementar integração com API para delete
-    console.log("Deletar visita:", id);
   };
 
   const handleChangeDate = (id: string) => {
@@ -156,7 +155,6 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
       // Recarrega para garantir dados atualizados
       router.refresh();
     } catch (error) {
-      console.error("Erro ao alterar data:", error);
       alert(error instanceof Error ? error.message : "Ocorreu um erro ao alterar a data.");
     } finally {
       setIsUpdating(false);
@@ -175,7 +173,6 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
       // Recarrega para garantir dados atualizados
       router.refresh();
     } catch (error) {
-      console.error("Erro ao alterar status:", error);
       alert(error instanceof Error ? error.message : "Ocorreu um erro ao alterar o status.");
     }
   };
@@ -204,7 +201,6 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
       // Recarrega para garantir dados atualizados
       router.refresh();
     } catch (error) {
-      console.error("Erro ao alterar técnico:", error);
       alert(error instanceof Error ? error.message : "Ocorreu um erro ao alterar o técnico.");
     } finally {
       setIsUpdating(false);
@@ -226,7 +222,7 @@ export function VisitasList({ initialVisitas, initialStats }: VisitasListProps) 
       // Recarrega as visitas
       router.refresh();
     } catch (error) {
-      console.error("Erro ao gerar visitas:", error);
+      // Ignorar erro ao gerar visitas
     } finally {
       setIsGenerating(false);
     }

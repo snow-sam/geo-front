@@ -98,7 +98,6 @@ export function TecnicoLoginForm() {
           setWorkspaceId(workspaceId);
         }
       } catch (workspaceError) {
-        console.error("[TecnicoLogin] Erro ao definir workspace:", workspaceError);
         // Continuar mesmo se houver erro ao definir workspace
       }
 

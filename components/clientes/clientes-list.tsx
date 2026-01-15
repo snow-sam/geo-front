@@ -133,7 +133,6 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
       await deleteCliente(id);
       setClientes((prev) => prev.filter((c) => c.id !== id));
     } catch (error) {
-      console.error("Erro ao deletar cliente:", error);
       alert("Erro ao deletar cliente. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -155,7 +154,6 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
       setClientes((prev) => [newCliente, ...prev]);
       setIsCreateDialogOpen(false);
     } catch (error) {
-      console.error("Erro ao criar cliente:", error);
       alert("Erro ao criar cliente. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -174,7 +172,6 @@ export function ClientesList({ initialClientes }: ClientesListProps) {
       setIsEditDialogOpen(false);
       setSelectedCliente(null);
     } catch (error) {
-      console.error("Erro ao atualizar cliente:", error);
       alert("Erro ao atualizar cliente. Tente novamente.");
     } finally {
       setIsLoading(false);

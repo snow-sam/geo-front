@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Roteiro } from "@/types/roteiro";
 import type { Tecnico } from "@/types/tecnico";
+import { authClient } from "@/lib/auth";
 
 // Função para obter a data atual formatada
 const getTodayDate = () => {
@@ -34,7 +35,8 @@ export default function TecnicoPortalPage() {
   const [tecnico, setTecnico] = useState<Tecnico | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { data: session, isPending } = authClient.useSession()
+  
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -48,7 +50,7 @@ export default function TecnicoPortalPage() {
           const fromStorage = localStorage.getItem("activeWorkspaceId");
           if (fromStorage) return fromStorage;
         } catch (e) {
-          console.warn("[Portal Técnico] Erro ao acessar localStorage:", e);
+          // Ignorar erro ao acessar localStorage
         }
         const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
         return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
@@ -68,11 +70,10 @@ export default function TecnicoPortalPage() {
           }
           
           const sessionData = await sessionRes.json();
-          
+          console.log("[Portal Técnico] sessionData:", sessionData);
           if (sessionData?.session?.activeOrganizationId) {
             workspaceId = sessionData.session.activeOrganizationId;
             setWorkspaceId(workspaceId);
-            console.log("[Portal Técnico] Workspace definido da sessão:", workspaceId);
           } else {
             // Tentar buscar a primeira organização
             const orgsResult = await organizationClient.list();
@@ -85,18 +86,12 @@ export default function TecnicoPortalPage() {
               await organizationClient.setActive({ organizationId: firstOrg.id });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
-              console.log("[Portal Técnico] Workspace definido da primeira organização:", workspaceId);
-            } else {
-              console.warn("[Portal Técnico] Nenhuma organização encontrada");
             }
           }
         } catch (workspaceError) {
-          console.error("[Portal Técnico] Erro ao definir workspace:", workspaceError);
           // Se não conseguir definir workspace, ainda tentar fazer as requisições
           // O backend pode ter uma forma alternativa de identificar o workspace
         }
-      } else {
-        console.log("[Portal Técnico] Workspace já definido:", workspaceId);
       }
 
       // Aguardar um pouco para garantir que o cookie foi definido
@@ -116,8 +111,6 @@ export default function TecnicoPortalPage() {
       setRoteiros(roteirosData);
       
     } catch (err: unknown) {
-      console.error("[Portal Técnico] Erro ao carregar dados:", err);
-      
       // Tratamento de erros mais específico
       let errorMessage = "Erro ao carregar dados. Tente novamente.";
       
@@ -159,8 +152,9 @@ export default function TecnicoPortalPage() {
   }, []);
 
   useEffect(() => {
+    console.log("[Portal Técnico] organizations:", session, isPending);
     loadData();
-  }, [loadData]);
+  }, [loadData, isPending]);
 
   // Separar roteiro de hoje dos demais
   const { roteiroHoje, outrosRoteiros } = useMemo(() => {
@@ -203,7 +197,7 @@ export default function TecnicoPortalPage() {
           // Aguardar um pouco antes de tentar novamente
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (e) {
-          console.warn("[Portal Técnico] Erro ao limpar workspace:", e);
+          // Ignorar erro ao limpar workspace
         }
       }
       

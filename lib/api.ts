@@ -5,8 +5,8 @@ import type { Chamado, ChamadoStats } from "@/types/chamado";
 import type { Roteiro } from "@/types/roteiro";
 import type { Solicitacao, SolicitacaoFormValues } from "@/types/solicitacao";
 
-// Usar API route proxy local para evitar problemas de CORS/cookies cross-domain
-const API_URL = "/api/proxy";
+// Usar rewrites do Next.js para redirecionar para o backend
+const API_URL = "/api";
 
 // Cache em memória para workspace (útil quando localStorage/cookie não funcionam)
 let workspaceIdCache: string | null = null;
@@ -22,24 +22,22 @@ function getWorkspaceId(): string | null {
     try {
       const fromLocalStorage = localStorage.getItem("activeWorkspaceId");
       if (fromLocalStorage) {
-        console.log(`[getWorkspaceId] ✅ Encontrado no localStorage: ${fromLocalStorage.substring(0, 8)}...`);
         workspaceIdCache = fromLocalStorage; // Atualizar cache
         return fromLocalStorage;
       }
     } catch (e) {
-      console.warn(`[getWorkspaceId] Erro ao acessar localStorage:`, e);
+      // Ignorar erro ao acessar localStorage
     }
     
     // 2. Tenta sessionStorage (persiste durante a sessão do navegador)
     try {
       const fromSessionStorage = sessionStorage.getItem("activeWorkspaceId");
       if (fromSessionStorage) {
-        console.log(`[getWorkspaceId] ✅ Encontrado no sessionStorage: ${fromSessionStorage.substring(0, 8)}...`);
         workspaceIdCache = fromSessionStorage; // Atualizar cache
         return fromSessionStorage;
       }
     } catch (e) {
-      console.warn(`[getWorkspaceId] Erro ao acessar sessionStorage:`, e);
+      // Ignorar erro ao acessar sessionStorage
     }
     
     // 3. Fallback para cookie
@@ -47,24 +45,20 @@ function getWorkspaceId(): string | null {
       const cookieMatch = document.cookie.match(/x-workspace-id=([^;]+)/);
       if (cookieMatch) {
         const cookieValue = decodeURIComponent(cookieMatch[1]);
-        console.log(`[getWorkspaceId] ✅ Encontrado no cookie: ${cookieValue.substring(0, 8)}...`);
         workspaceIdCache = cookieValue; // Atualizar cache
         return cookieValue;
       }
     } catch (e) {
-      console.warn(`[getWorkspaceId] Erro ao acessar cookie:`, e);
+      // Ignorar erro ao acessar cookie
     }
     
     // 4. Último recurso: cache em memória (só funciona durante a sessão atual)
     if (workspaceIdCache) {
-      console.log(`[getWorkspaceId] ✅ Encontrado no cache em memória: ${workspaceIdCache.substring(0, 8)}...`);
       return workspaceIdCache;
     }
     
-    console.log(`[getWorkspaceId] ⚠️ Workspace não encontrado em nenhum storage`);
     return null;
   } catch (e) {
-    console.warn(`[getWorkspaceId] Erro geral ao acessar storage:`, e);
     return workspaceIdCache; // Retornar cache se disponível
   }
 }
@@ -82,17 +76,15 @@ export function setWorkspaceId(workspaceId: string | null): void {
     // 1. Salvar no localStorage (persiste entre sessões)
     try {
       localStorage.setItem("activeWorkspaceId", workspaceId);
-      console.log(`[setWorkspaceId] ✅ Salvo no localStorage`);
     } catch (e) {
-      console.warn("[setWorkspaceId] Erro ao salvar no localStorage:", e);
+      // Ignorar erro ao salvar no localStorage
     }
     
     // 2. Salvar no sessionStorage (persiste durante a sessão)
     try {
       sessionStorage.setItem("activeWorkspaceId", workspaceId);
-      console.log(`[setWorkspaceId] ✅ Salvo no sessionStorage`);
     } catch (e) {
-      console.warn("[setWorkspaceId] Erro ao salvar no sessionStorage:", e);
+      // Ignorar erro ao salvar no sessionStorage
     }
     
     // Salvar também como cookie para SSR e requisições
@@ -129,37 +121,25 @@ export function setWorkspaceId(workspaceId: string | null): void {
       cookieSaved = !!(verifyCookie3 && decodeURIComponent(verifyCookie3[1]) === workspaceId);
     }
     
-    // Log para debug
-    const finalCookie = document.cookie.match(/x-workspace-id=([^;]+)/);
-    console.log(`[setWorkspaceId] Workspace definido: ${workspaceId.substring(0, 8)}...`, {
-      secure: isSecure,
-      cookieSaved,
-      cookieValue: finalCookie ? decodeURIComponent(finalCookie[1]).substring(0, 8) : "não encontrado",
-      allCookies: document.cookie.split(';').filter(c => c.includes('workspace')),
-    });
-    
-    if (!cookieSaved) {
-      console.error(`[setWorkspaceId] ❌ Cookie não foi salvo após 3 tentativas! O workspace será enviado apenas via header.`);
-    }
     
   } else {
     // Limpar todos os storages
     try {
       localStorage.removeItem("activeWorkspaceId");
     } catch (e) {
-      console.warn("[setWorkspaceId] Erro ao remover do localStorage:", e);
+      // Ignorar erro ao remover do localStorage
     }
     
     try {
       sessionStorage.removeItem("activeWorkspaceId");
     } catch (e) {
-      console.warn("[setWorkspaceId] Erro ao remover do sessionStorage:", e);
+      // Ignorar erro ao remover do sessionStorage
     }
     
     try {
       document.cookie = "x-workspace-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     } catch (e) {
-      console.warn("[setWorkspaceId] Erro ao remover cookie:", e);
+      // Ignorar erro ao remover cookie
     }
   }
 }
@@ -172,12 +152,10 @@ async function getTecnicoWorkspace(): Promise<string | null> {
   if (typeof window === "undefined") return null;
   
   try {
-    console.log(`[getTecnicoWorkspace] 🔍 Tentando obter workspace do técnico...`);
-    
     // Método 1: Tentar endpoint especial (se existir)
     // Nota: Este endpoint pode não existir, mas tentamos primeiro
     try {
-      const workspaceRes = await fetch("/api/proxy/tecnico/workspace", {
+      const workspaceRes = await fetch("/api/tecnico/workspace", {
         credentials: "include",
         cache: "no-store",
       });
@@ -186,18 +164,17 @@ async function getTecnicoWorkspace(): Promise<string | null> {
         const workspaceData = await workspaceRes.json();
         if (workspaceData?.workspaceId || workspaceData?.organizationId) {
           const workspaceId = workspaceData.workspaceId || workspaceData.organizationId;
-          console.log(`[getTecnicoWorkspace] ✅ Workspace obtido do endpoint especial: ${workspaceId.substring(0, 8)}...`);
           return workspaceId;
         }
       }
     } catch (e) {
-      console.log(`[getTecnicoWorkspace] Endpoint especial não disponível ou erro:`, e);
+      // Endpoint especial não disponível ou erro
     }
     
     // Método 2: Tentar fazer requisição ao /tecnico/me sem workspace
     // O backend pode retornar o workspace necessário no próprio técnico
     try {
-      const tecnicoRes = await fetch("/api/proxy/tecnico/me", {
+      const tecnicoRes = await fetch("/api/auth/me", {
         credentials: "include",
         cache: "no-store",
         headers: {
@@ -210,16 +187,13 @@ async function getTecnicoWorkspace(): Promise<string | null> {
         const tecnicoData = await tecnicoRes.json();
         // Verificar se o técnico tem campo de workspace
         if (tecnicoData?.workspaceId) {
-          console.log(`[getTecnicoWorkspace] ✅ Workspace obtido do técnico: ${tecnicoData.workspaceId.substring(0, 8)}...`);
           return tecnicoData.workspaceId;
         }
         if (tecnicoData?.organizationId) {
-          console.log(`[getTecnicoWorkspace] ✅ Workspace obtido do técnico (organizationId): ${tecnicoData.organizationId.substring(0, 8)}...`);
           return tecnicoData.organizationId;
         }
         // Verificar se há workspace em algum campo relacionado
         if (tecnicoData?.workspace?.id) {
-          console.log(`[getTecnicoWorkspace] ✅ Workspace obtido do técnico (workspace.id): ${tecnicoData.workspace.id.substring(0, 8)}...`);
           return tecnicoData.workspace.id;
         }
       } else if (tecnicoRes.status === 400) {
@@ -228,7 +202,6 @@ async function getTecnicoWorkspace(): Promise<string | null> {
           const errorData = await tecnicoRes.json();
           if (errorData?.requiredWorkspaceId || errorData?.workspaceId) {
             const workspaceId = errorData.requiredWorkspaceId || errorData.workspaceId;
-            console.log(`[getTecnicoWorkspace] ✅ Workspace obtido da mensagem de erro: ${workspaceId.substring(0, 8)}...`);
             return workspaceId;
           }
         } catch {
@@ -236,7 +209,7 @@ async function getTecnicoWorkspace(): Promise<string | null> {
         }
       }
     } catch (e) {
-      console.warn(`[getTecnicoWorkspace] Erro ao tentar obter workspace do técnico:`, e);
+      // Ignorar erro ao tentar obter workspace do técnico
     }
     
     // Método 3: Tentar obter através do userId da sessão
@@ -254,7 +227,7 @@ async function getTecnicoWorkspace(): Promise<string | null> {
           // Tentar endpoint que retorna workspace através do userId
           // Nota: Este endpoint pode não existir
           try {
-            const userWorkspaceRes = await fetch(`/api/proxy/users/${userId}/workspace`, {
+            const userWorkspaceRes = await fetch(`/api/users/${userId}/workspace`, {
               credentials: "include",
               cache: "no-store",
             });
@@ -263,7 +236,6 @@ async function getTecnicoWorkspace(): Promise<string | null> {
               const workspaceData = await userWorkspaceRes.json();
               if (workspaceData?.workspaceId || workspaceData?.organizationId) {
                 const workspaceId = workspaceData.workspaceId || workspaceData.organizationId;
-                console.log(`[getTecnicoWorkspace] ✅ Workspace obtido através do userId: ${workspaceId.substring(0, 8)}...`);
                 return workspaceId;
               }
             }
@@ -273,13 +245,11 @@ async function getTecnicoWorkspace(): Promise<string | null> {
         }
       }
     } catch (e) {
-      console.warn(`[getTecnicoWorkspace] Erro ao tentar obter workspace através do userId:`, e);
+      // Ignorar erro ao tentar obter workspace através do userId
     }
     
-    console.warn(`[getTecnicoWorkspace] ⚠️ Não foi possível obter workspace do técnico através de nenhum método`);
     return null;
   } catch (e) {
-    console.error(`[getTecnicoWorkspace] ❌ Erro geral ao tentar obter workspace:`, e);
     return null;
   }
 }
@@ -304,8 +274,6 @@ async function fetchAPI<T>(
   
   if (shouldFetchFromSession && typeof window !== "undefined") {
     try {
-      console.log(`[fetchAPI] Workspace não encontrado, buscando da sessão para ${endpoint}...`);
-      
       // Fazer requisição síncrona para buscar workspace antes de continuar
       const sessionRes = await fetch("/api/auth/session", { 
         credentials: "include",
@@ -314,20 +282,13 @@ async function fetchAPI<T>(
       
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
-        console.log(`[fetchAPI] Dados da sessão:`, {
-          hasSession: !!sessionData?.session,
-          activeOrgId: sessionData?.session?.activeOrganizationId,
-          userId: sessionData?.user?.id,
-        });
         
         if (sessionData?.session?.activeOrganizationId) {
           workspaceId = sessionData.session.activeOrganizationId;
           // Definir imediatamente para próximas requisições
           setWorkspaceId(workspaceId);
-          console.log(`[fetchAPI] ✅ Workspace obtido da sessão: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
         } else {
           // Tentar buscar organizações se não houver workspace ativo
-          console.log(`[fetchAPI] Nenhum workspace ativo na sessão, buscando organizações...`);
           try {
             const { organizationClient } = await import("@/lib/organization-client");
             const orgsResult = await organizationClient.list();
@@ -335,39 +296,28 @@ async function fetchAPI<T>(
               ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
               : [];
             
-            console.log(`[fetchAPI] Organizações encontradas:`, orgsData.length);
-            
             if (orgsData.length > 0) {
               const firstOrg = orgsData[0];
               // Definir como ativa
               await organizationClient.setActive({ organizationId: firstOrg.id });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
-              console.log(`[fetchAPI] ✅ Workspace obtido da primeira organização: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
             } else {
               // Se for uma requisição de técnico e não houver organizações,
               // tentar obter o workspace através do próprio técnico
               if (isTecnicoRequest) {
-                console.log(`[fetchAPI] 🔍 Tentando obter workspace através do técnico...`);
                 try {
                   const tecnicoWorkspaceId = await getTecnicoWorkspace();
                   if (tecnicoWorkspaceId) {
                     workspaceId = tecnicoWorkspaceId;
                     setWorkspaceId(workspaceId);
-                    console.log(`[fetchAPI] ✅ Workspace obtido do técnico: ${workspaceId.substring(0, 8)}...`);
-                  } else {
-                    console.log(`[fetchAPI] ⚠️ Requisição de técnico sem workspace - tentando mesmo assim`);
                   }
                 } catch (tecnicoWorkspaceError) {
-                  console.warn(`[fetchAPI] Erro ao obter workspace do técnico:`, tecnicoWorkspaceError);
-                  console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico`);
+                  // Ignorar erro ao obter workspace do técnico
                 }
-              } else {
-                console.warn(`[fetchAPI] ⚠️ Nenhuma organização encontrada`);
               }
             }
           } catch (orgError) {
-            console.warn(`[fetchAPI] Erro ao buscar organizações:`, orgError);
             // Se for requisição de técnico, tentar obter workspace do técnico
             if (isTecnicoRequest) {
               try {
@@ -375,16 +325,14 @@ async function fetchAPI<T>(
                 if (tecnicoWorkspaceId) {
                   workspaceId = tecnicoWorkspaceId;
                   setWorkspaceId(workspaceId);
-                  console.log(`[fetchAPI] ✅ Workspace obtido do técnico após erro: ${workspaceId.substring(0, 8)}...`);
                 }
               } catch {
-                console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico`);
+                // Ignorar erro
               }
             }
           }
         }
       } else {
-        console.warn(`[fetchAPI] Erro ao buscar sessão: ${sessionRes.status}`);
         // Se for requisição de técnico, tentar obter workspace do técnico
         if (isTecnicoRequest) {
           try {
@@ -392,15 +340,13 @@ async function fetchAPI<T>(
             if (tecnicoWorkspaceId) {
               workspaceId = tecnicoWorkspaceId;
               setWorkspaceId(workspaceId);
-              console.log(`[fetchAPI] ✅ Workspace obtido do técnico após erro na sessão: ${workspaceId.substring(0, 8)}...`);
             }
           } catch {
-            console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico após erro na sessão`);
+            // Ignorar erro
           }
         }
       }
     } catch (e) {
-      console.error(`[fetchAPI] ❌ Erro ao buscar workspace da sessão para ${endpoint}:`, e);
       // Se for requisição de técnico, tentar obter workspace do técnico
       if (isTecnicoRequest) {
         try {
@@ -408,15 +354,12 @@ async function fetchAPI<T>(
           if (tecnicoWorkspaceId) {
             workspaceId = tecnicoWorkspaceId;
             setWorkspaceId(workspaceId);
-            console.log(`[fetchAPI] ✅ Workspace obtido do técnico após erro geral: ${workspaceId.substring(0, 8)}...`);
           }
         } catch {
-          console.log(`[fetchAPI] ⚠️ Continuando sem workspace para requisição de técnico após erro`);
+          // Ignorar erro
         }
       }
     }
-  } else if (workspaceId) {
-    console.log(`[fetchAPI] ✅ Workspace encontrado no storage: ${workspaceId ? workspaceId.substring(0, 8) : 'null'}...`);
   }
 
   // Preparar headers garantindo que o workspace sempre seja enviado se disponível
@@ -444,20 +387,6 @@ async function fetchAPI<T>(
   // Isso sobrescreve qualquer valor anterior para garantir que o workspace correto seja enviado
   if (finalWorkspaceId) {
     baseHeaders["x-workspace-id"] = finalWorkspaceId;
-    console.log(`[fetchAPI] 📤 Enviando workspace no header para ${endpoint}: ${finalWorkspaceId.substring(0, 8)}...`);
-  } else {
-    // Log de erro mais detalhado para debug
-    console.error(`[fetchAPI] ⚠️ Workspace ID não encontrado para ${endpoint}`, {
-      localStorage: typeof window !== "undefined" ? localStorage.getItem("activeWorkspaceId") : "N/A",
-      sessionStorage: typeof window !== "undefined" ? sessionStorage.getItem("activeWorkspaceId") : "N/A",
-      cookie: typeof document !== "undefined" ? document.cookie.match(/x-workspace-id=([^;]+)/)?.[1] : "N/A",
-      cache: workspaceIdCache || "N/A",
-      url,
-    });
-    
-    // Se não tiver workspace, ainda tentar fazer a requisição
-    // O backend pode ter uma forma alternativa de identificar o workspace
-    console.warn(`[fetchAPI] ⚠️ Continuando sem workspace - backend pode rejeitar`);
   }
   
   const headers = baseHeaders;
@@ -469,21 +398,7 @@ async function fetchAPI<T>(
     // Se ainda não estiver no header, adicionar agora
     if (headerWorkspaceId && !headers["x-workspace-id"]) {
       headers["x-workspace-id"] = headerWorkspaceId;
-      console.log(`[fetchAPI] ⚠️ Workspace foi adicionado ao header na última verificação: ${headerWorkspaceId.substring(0, 8)}...`);
     }
-    
-    console.log(`[fetchAPI] 🚀 Fazendo requisição para ${url}`, {
-      method: options?.method || "GET",
-      hasWorkspace: !!headerWorkspaceId,
-      workspaceValue: headerWorkspaceId ? `${String(headerWorkspaceId).substring(0, 8)}...` : null,
-      headers: Object.keys(headers),
-      xWorkspaceIdHeader: headers["x-workspace-id"] ? `${String(headers["x-workspace-id"]).substring(0, 8)}...` : "AUSENTE",
-      allHeaderKeys: Object.keys(headers),
-      headerValues: Object.entries(headers).reduce((acc, [k, v]) => {
-        acc[k] = typeof v === 'string' ? v.substring(0, 20) : String(v);
-        return acc;
-      }, {} as Record<string, string>),
-    });
     
     // Criar objeto de fetch options garantindo que headers sejam mesclados corretamente
     const fetchOptions: RequestInit = {
@@ -492,13 +407,6 @@ async function fetchAPI<T>(
       cache: "no-store",
       headers: headers, // Headers já preparados com workspace
     };
-    
-    // Log final dos headers que serão enviados
-    if (fetchOptions.headers instanceof Headers) {
-      console.log(`[fetchAPI] Headers finais (Headers object):`, Array.from(fetchOptions.headers.entries()));
-    } else {
-      console.log(`[fetchAPI] Headers finais (object):`, fetchOptions.headers);
-    }
     
     const response = await fetch(url, fetchOptions);
 
@@ -523,22 +431,17 @@ async function fetchAPI<T>(
           // Tentar buscar workspace novamente se ainda não tiver
           if (typeof window !== "undefined" && !workspaceId) {
             try {
-              console.log(`[fetchAPI] 🔄 Tentando recuperar workspace após erro 400...`);
-              
               // Se for requisição de técnico, tentar obter workspace do técnico primeiro
               if (endpoint.includes('/tecnico/')) {
-                console.log(`[fetchAPI] 🔄 Tentando obter workspace do técnico após erro 400...`);
                 try {
                   const tecnicoWorkspaceId = await getTecnicoWorkspace();
                   if (tecnicoWorkspaceId) {
                     setWorkspaceId(tecnicoWorkspaceId);
-                    console.log(`[fetchAPI] ✅ Workspace recuperado do técnico após erro 400: ${tecnicoWorkspaceId.substring(0, 8)}...`);
                     // Fazer retry automático da requisição original
-                    console.log(`[fetchAPI] 🔄 Fazendo retry automático da requisição com workspace...`);
                     return fetchAPI<T>(endpoint, options);
                   }
                 } catch (e) {
-                  console.warn("[fetchAPI] Erro ao obter workspace do técnico após erro 400:", e);
+                  // Ignorar erro ao obter workspace do técnico após erro 400
                 }
               }
               
@@ -553,14 +456,11 @@ async function fetchAPI<T>(
                 if (sessionData?.session?.activeOrganizationId) {
                   const newWorkspaceId = sessionData.session.activeOrganizationId;
                   setWorkspaceId(newWorkspaceId);
-                  console.log(`[fetchAPI] ✅ Workspace recuperado da sessão após erro 400: ${newWorkspaceId.substring(0, 8)}...`);
                   // Fazer retry automático da requisição original
-                  console.log(`[fetchAPI] 🔄 Fazendo retry automático da requisição com workspace...`);
                   return fetchAPI<T>(endpoint, options);
                 } else {
                   // Se for requisição de técnico e não houver workspace, tentar buscar organizações novamente
                   if (endpoint.includes('/tecnico/')) {
-                    console.log(`[fetchAPI] 🔄 Tentando buscar organizações novamente para técnico...`);
                     try {
                       const { organizationClient } = await import("@/lib/organization-client");
                       const orgsResult = await organizationClient.list();
@@ -573,19 +473,17 @@ async function fetchAPI<T>(
                         await organizationClient.setActive({ organizationId: firstOrg.id });
                         const newWorkspaceId = firstOrg.id;
                         setWorkspaceId(newWorkspaceId);
-                        console.log(`[fetchAPI] ✅ Workspace recuperado da organização após erro 400: ${newWorkspaceId.substring(0, 8)}...`);
                         // Fazer retry automático da requisição original
-                        console.log(`[fetchAPI] 🔄 Fazendo retry automático da requisição com workspace...`);
                         return fetchAPI<T>(endpoint, options);
                       }
                     } catch (e) {
-                      console.warn("[fetchAPI] Erro ao buscar organizações após erro 400:", e);
+                      // Ignorar erro ao buscar organizações após erro 400
                     }
                   }
                 }
               }
             } catch (e) {
-              console.warn("[fetchAPI] Erro ao recuperar workspace após erro 400:", e);
+              // Ignorar erro ao recuperar workspace após erro 400
             }
           }
         }
@@ -614,8 +512,6 @@ async function fetchAPI<T>(
     const data = text ? JSON.parse(text) : null;
     return data;
   } catch (error) {
-    console.error(`Erro ao buscar ${endpoint}:`, error);
-    
     // Se for um erro de rede, criar mensagem mais amigável
     if (error instanceof TypeError && error.message.includes("fetch")) {
       throw new Error("Erro de conexão. Verifique sua internet e tente novamente.");
@@ -749,7 +645,6 @@ export async function importClientesExcel(file: File): Promise<Cliente[]> {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Erro ao importar clientes:", error);
     throw error;
   }
 }
@@ -907,7 +802,6 @@ export async function importTecnicosExcel(file: File): Promise<Tecnico[]> {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Erro ao importar técnicos:", error);
     throw error;
   }
 }

@@ -56,12 +56,10 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
           await organizationClient.setActive({ organizationId: firstOrg.id });
           setWorkspaceId(firstOrg.id);
           setWorkspaceIdState(firstOrg.id);
-        } else {
-          console.log("[WorkspaceProvider] No organizations found");
         }
       }
     } catch (error) {
-      console.error("Erro ao sincronizar workspace:", error);
+      // Ignorar erro ao sincronizar workspace
     } finally {
       setIsLoading(false);
     }

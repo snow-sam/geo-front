@@ -125,17 +125,14 @@ export function ChamadosList({ initialChamados, initialStats }: ChamadosListProp
 
   const handleDelete = (id: string) => {
     // TODO: Implementar integração com API para delete
-    console.log("Deletar chamado:", id);
   };
 
   const handleEdit = (id: string) => {
     // TODO: Implementar integração com API para edição
-    console.log("Editar chamado:", id);
   };
 
   const handleChangeStatus = (id: string, status: StatusChamado) => {
     // TODO: Implementar integração com API para mudar status
-    console.log("Mudar status do chamado:", id, "para", status);
   };
 
   const formatDateForInput = (dateString: string | null) => {

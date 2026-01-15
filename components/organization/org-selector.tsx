@@ -79,7 +79,7 @@ export function OrgSelector() {
         updateWorkspaceId(firstOrg.id);
       }
     } catch (error) {
-      console.error("Erro ao carregar organizações:", error);
+      // Ignorar erro ao carregar organizações
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +95,7 @@ export function OrgSelector() {
       updateWorkspaceId(orgId); // Update context, cookie and localStorage
       router.refresh();
     } catch (error) {
-      console.error("Erro ao trocar organização:", error);
+      // Ignorar erro ao trocar organização
     }
   };
 
