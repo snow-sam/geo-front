@@ -5,8 +5,8 @@ import type { Chamado, ChamadoStats } from "@/types/chamado";
 import type { Roteiro } from "@/types/roteiro";
 import type { Solicitacao, SolicitacaoFormValues } from "@/types/solicitacao";
 
-// Usar rewrites do Next.js para redirecionar para o backend
-const API_URL = "/api";
+// Usar API route proxy local para evitar problemas de CORS/cookies cross-domain
+const API_URL = "/api/proxy";
 
 // Cache em memória para workspace (útil quando localStorage/cookie não funcionam)
 let workspaceIdCache: string | null = null;
@@ -155,7 +155,7 @@ async function getTecnicoWorkspace(): Promise<string | null> {
     // Método 1: Tentar endpoint especial (se existir)
     // Nota: Este endpoint pode não existir, mas tentamos primeiro
     try {
-      const workspaceRes = await fetch("/api/tecnico/workspace", {
+      const workspaceRes = await fetch("/api/proxy/tecnico/workspace", {
         credentials: "include",
         cache: "no-store",
       });
@@ -174,7 +174,7 @@ async function getTecnicoWorkspace(): Promise<string | null> {
     // Método 2: Tentar fazer requisição ao /tecnico/me sem workspace
     // O backend pode retornar o workspace necessário no próprio técnico
     try {
-      const tecnicoRes = await fetch("/api/tecnico/me", {
+      const tecnicoRes = await fetch("/api/proxy/tecnico/me", {
         credentials: "include",
         cache: "no-store",
         headers: {
@@ -227,7 +227,7 @@ async function getTecnicoWorkspace(): Promise<string | null> {
           // Tentar endpoint que retorna workspace através do userId
           // Nota: Este endpoint pode não existir
           try {
-            const userWorkspaceRes = await fetch(`/api/users/${userId}/workspace`, {
+            const userWorkspaceRes = await fetch(`/api/proxy/users/${userId}/workspace`, {
               credentials: "include",
               cache: "no-store",
             });
