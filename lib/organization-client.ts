@@ -1,5 +1,7 @@
 // Cliente de organização que usa API routes locais (evita problemas de CORS/cookies cross-domain)
 
+import { authClient } from "@/lib/auth";
+
 interface Organization {
   id: string;
   name: string;
@@ -96,7 +98,7 @@ export const organizationClient = {
     });
   },
 
-  // Definir organização ativa
+  // Definir organização ativa (DEPRECATED - usar setActiveOrganization)
   async setActive(data: {
     organizationId: string;
   }): Promise<ApiResponse<{ success: boolean }>> {
@@ -170,4 +172,28 @@ export const organizationClient = {
     );
   },
 };
+
+/**
+ * Define a organização ativa usando authClient.organization.setActive()
+ * Esta função deve ser usada sempre que precisar definir ou mudar a organização ativa
+ */
+export async function setActiveOrganization(data: {
+  organizationId: string;
+  organizationSlug: string;
+}): Promise<{ data?: { success: boolean }; error?: { message: string } }> {
+  try {
+    const result = await authClient.organization.setActive({
+      organizationId: data.organizationId,
+      organizationSlug: data.organizationSlug,
+    });
+
+    if (result.error) {
+      return { error: { message: result.error.message || "Erro ao definir organização ativa" } };
+    }
+
+    return { data: { success: true } };
+  } catch (error) {
+    return { error: { message: "Erro de conexão ao definir organização ativa" } };
+  }
+}
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Check, ChevronsUpDown, Plus, Settings } from "lucide-react";
-import { organizationClient } from "@/lib/organization-client";
+import { organizationClient, setActiveOrganization } from "@/lib/organization-client";
 import { useWorkspace } from "@/components/organization/workspace-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,14 +67,20 @@ export function OrgSelector() {
         } else if (orgsData.length > 0) {
           // Active org not found in list, set first one
           const firstOrg = orgsData[0];
-          await organizationClient.setActive({ organizationId: firstOrg.id });
+          await setActiveOrganization({
+            organizationId: firstOrg.id,
+            organizationSlug: firstOrg.slug,
+          });
           setActiveOrg(firstOrg);
           updateWorkspaceId(firstOrg.id);
         }
       } else if (orgsData.length > 0) {
         // No active org in session, set first one
         const firstOrg = orgsData[0];
-        await organizationClient.setActive({ organizationId: firstOrg.id });
+        await setActiveOrganization({
+          organizationId: firstOrg.id,
+          organizationSlug: firstOrg.slug,
+        });
         setActiveOrg(firstOrg);
         updateWorkspaceId(firstOrg.id);
       }
@@ -87,13 +93,16 @@ export function OrgSelector() {
 
   const handleOrgChange = async (orgId: string) => {
     try {
-      await organizationClient.setActive({ organizationId: orgId });
       const org = organizations.find((o) => o.id === orgId);
       if (org) {
+        await setActiveOrganization({
+          organizationId: org.id,
+          organizationSlug: org.slug,
+        });
         setActiveOrg(org);
+        updateWorkspaceId(orgId); // Update context, cookie and localStorage
+        router.refresh();
       }
-      updateWorkspaceId(orgId); // Update context, cookie and localStorage
-      router.refresh();
     } catch (error) {
       // Ignorar erro ao trocar organização
     }

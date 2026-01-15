@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, useCallback } from "react";
-import { organizationClient } from "@/lib/organization-client";
+import { organizationClient, setActiveOrganization } from "@/lib/organization-client";
 import { setWorkspaceId } from "@/lib/api";
 
 interface WorkspaceContextType {
@@ -53,7 +53,10 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
         if (orgsData.length > 0) {
           const firstOrg = orgsData[0];
-          await organizationClient.setActive({ organizationId: firstOrg.id });
+          await setActiveOrganization({
+            organizationId: firstOrg.id,
+            organizationSlug: firstOrg.slug,
+          });
           setWorkspaceId(firstOrg.id);
           setWorkspaceIdState(firstOrg.id);
         }

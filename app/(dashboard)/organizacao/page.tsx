@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Building2, Users, UserPlus, Settings, Loader2, Plus } from "lucide-react";
-import { organizationClient } from "@/lib/organization-client";
+import { organizationClient, setActiveOrganization } from "@/lib/organization-client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,9 +182,10 @@ function OrganizacaoContent() {
       }
 
       // Set as active
-      if (result.data?.id) {
-        await organizationClient.setActive({
+      if (result.data?.id && result.data?.slug) {
+        await setActiveOrganization({
           organizationId: result.data.id,
+          organizationSlug: result.data.slug,
         });
       }
 

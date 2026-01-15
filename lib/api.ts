@@ -299,7 +299,11 @@ async function fetchAPI<T>(
             if (orgsData.length > 0) {
               const firstOrg = orgsData[0];
               // Definir como ativa
-              await organizationClient.setActive({ organizationId: firstOrg.id });
+              const { setActiveOrganization } = await import("@/lib/organization-client");
+              await setActiveOrganization({
+                organizationId: firstOrg.id,
+                organizationSlug: firstOrg.slug,
+              });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
             } else {
@@ -470,7 +474,11 @@ async function fetchAPI<T>(
                       
                       if (orgsData.length > 0) {
                         const firstOrg = orgsData[0];
-                        await organizationClient.setActive({ organizationId: firstOrg.id });
+                        const { setActiveOrganization } = await import("@/lib/organization-client");
+                        await setActiveOrganization({
+                          organizationId: firstOrg.id,
+                          organizationSlug: firstOrg.slug,
+                        });
                         const newWorkspaceId = firstOrg.id;
                         setWorkspaceId(newWorkspaceId);
                         // Fazer retry automático da requisição original

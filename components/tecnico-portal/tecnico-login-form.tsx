@@ -88,7 +88,11 @@ export function TecnicoLoginForm() {
           if (orgsData.length > 0) {
             const firstOrg = orgsData[0];
             // Definir como ativa
-            await organizationClient.setActive({ organizationId: firstOrg.id });
+            const { setActiveOrganization } = await import("@/lib/organization-client");
+            await setActiveOrganization({
+              organizationId: firstOrg.id,
+              organizationSlug: firstOrg.slug,
+            });
             workspaceId = firstOrg.id;
           }
         }

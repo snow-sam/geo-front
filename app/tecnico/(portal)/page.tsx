@@ -83,7 +83,11 @@ export default function TecnicoPortalPage() {
             
             if (orgsData.length > 0) {
               const firstOrg = orgsData[0];
-              await organizationClient.setActive({ organizationId: firstOrg.id });
+              const { setActiveOrganization } = await import("@/lib/organization-client");
+              await setActiveOrganization({
+                organizationId: firstOrg.id,
+                organizationSlug: firstOrg.slug,
+              });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
             }
