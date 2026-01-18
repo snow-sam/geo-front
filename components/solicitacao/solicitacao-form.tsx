@@ -27,9 +27,10 @@ import { createSolicitacao } from "@/lib/api";
 
 interface SolicitacaoFormProps {
   onSuccess?: () => void;
+  organizationSlug?: string;
 }
 
-export function SolicitacaoForm({ onSuccess }: SolicitacaoFormProps) {
+export function SolicitacaoForm({ onSuccess, organizationSlug }: SolicitacaoFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
