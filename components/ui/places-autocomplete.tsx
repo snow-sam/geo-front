@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { AlertCircle } from "lucide-react";
 
@@ -17,18 +17,8 @@ interface PlacesAutocompleteProps {
   disabled?: boolean;
 }
 
-interface PlaceSelectEventDetail {
-  place: {
-    formattedAddress?: string;
-    placeId?: string;
-    geometry?: {
-      location: {
-        lat: () => number;
-        lng: () => number;
-      };
-    };
-  };
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PlaceResult = any;
 
 export function PlacesAutocomplete({
   value,
@@ -40,6 +30,24 @@ export function PlacesAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteElementRef = useRef<HTMLElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Refs para callbacks estáveis
+  const onChangeRef = useRef(onChange);
+  const onPlaceSelectedRef = useRef(onPlaceSelected);
+  const valueRef = useRef(value);
+
+  // Atualiza refs quando props mudam
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    onPlaceSelectedRef.current = onPlaceSelected;
+  }, [onPlaceSelected]);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   const [isLoaded, setIsLoaded] = useState(
     () =>
@@ -87,6 +95,53 @@ export function PlacesAutocomplete({
   }, [isLoaded]);
 
   /**
+   * Handler para seleção de lugar - usa fetchFields para obter dados completos
+   */
+  const handlePlaceSelect = useCallback(async (event: CustomEvent) => {
+    try {
+      const place: PlaceResult = event.detail?.place;
+      
+      if (!place) {
+        console.warn("Place não encontrado no evento");
+        return;
+      }
+
+      // Busca os campos necessários (location e formattedAddress)
+      await place.fetchFields({
+        fields: ["displayName", "formattedAddress", "location", "id"],
+      });
+
+      const location = place.location;
+      
+      if (!location) {
+        console.warn("Location não disponível após fetchFields");
+        return;
+      }
+
+      const address = place.formattedAddress ?? "";
+      const latitude = location.lat();
+      const longitude = location.lng();
+      const placeId = place.id ?? "";
+
+      // Atualiza o valor do input
+      if (inputRef.current) {
+        inputRef.current.value = address;
+      }
+
+      // Chama os callbacks usando refs
+      onChangeRef.current(address);
+      onPlaceSelectedRef.current?.({
+        address,
+        latitude,
+        longitude,
+        placeId,
+      });
+    } catch (err) {
+      console.error("Erro ao processar lugar selecionado:", err);
+    }
+  }, []);
+
+  /**
    * Inicializa o PlaceAutocompleteElement uma única vez
    */
   useEffect(() => {
@@ -99,81 +154,68 @@ export function PlacesAutocomplete({
           componentRestrictions: { country: "br" },
         });
 
-      autocompleteElement.setAttribute("theme", "light");
+      // Força tema claro via style inline
+      autocompleteElement.style.colorScheme = "light";
 
       containerRef.current.replaceChildren(autocompleteElement);
 
-      const input = autocompleteElement.querySelector(
-        "input"
-      ) as HTMLInputElement | null;
+      // Aguarda um pouco para o elemento ser renderizado
+      setTimeout(() => {
+        const input = autocompleteElement.querySelector(
+          "input"
+        ) as HTMLInputElement | null;
 
-      if (input) {
-        inputRef.current = input;
-        input.placeholder = placeholder ?? "";
-        input.value = value;
-        input.disabled = !!disabled;
-        input.autocomplete = "off";
+        if (input) {
+          inputRef.current = input;
+          input.placeholder = placeholder ?? "";
+          input.value = valueRef.current;
+          input.disabled = !!disabled;
+          input.autocomplete = "off";
 
-        input.className =
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+          // Estilização com fundo branco explícito para evitar dark mode
+          input.className =
+            "flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
-        input.addEventListener("input", (e) => {
-          onChange((e.target as HTMLInputElement).value);
-        });
-      }
+          input.addEventListener("input", (e) => {
+            onChangeRef.current((e.target as HTMLInputElement).value);
+          });
+        }
+      }, 50);
 
-      const handlePlaceSelect = (
-        event: CustomEvent<PlaceSelectEventDetail>
-      ) => {
-        const place = event.detail.place;
+      const placeSelectHandler = ((event: Event) => {
+        handlePlaceSelect(event as CustomEvent);
+      }) as EventListener;
 
-        if (!place?.geometry?.location) return;
-
-        const address = place.formattedAddress ?? "";
-        const latitude = place.geometry.location.lat();
-        const longitude = place.geometry.location.lng();
-        const placeId = place.placeId ?? "";
-
-        onChange(address);
-
-        onPlaceSelected?.({
-          address,
-          latitude,
-          longitude,
-          placeId,
-        });
-      };
-
-      autocompleteElement.addEventListener(
-        "gmp-placeselect",
-        handlePlaceSelect as EventListener
-      );
+      autocompleteElement.addEventListener("gmp-placeselect", placeSelectHandler);
 
       autocompleteElementRef.current = autocompleteElement;
 
       return () => {
-        autocompleteElement.removeEventListener(
-          "gmp-placeselect",
-          handlePlaceSelect as EventListener
-        );
-        containerRef.current?.replaceChildren();
-        autocompleteElementRef.current = null;
-        inputRef.current = null;
+        autocompleteElement.removeEventListener("gmp-placeselect", placeSelectHandler);
       };
     } catch (err) {
       console.error("Erro ao inicializar Places Autocomplete:", err);
       setLoadError(true);
     }
-  }, [isLoaded, disabled, placeholder, onChange, onPlaceSelected, value]);
+  }, [isLoaded, disabled, placeholder, handlePlaceSelect]);
 
   /**
-   * Sincroniza value externo → input interno
+   * Sincroniza value externo → input interno (apenas se diferente)
    */
   useEffect(() => {
-    if (inputRef.current && inputRef.current.value !== value) {
+    if (inputRef.current && inputRef.current.value !== value && value !== "") {
       inputRef.current.value = value;
     }
   }, [value]);
+
+  /**
+   * Atualiza placeholder quando mudar
+   */
+  useEffect(() => {
+    if (inputRef.current && placeholder) {
+      inputRef.current.placeholder = placeholder;
+    }
+  }, [placeholder]);
 
   /**
    * Fallback quando Google Maps falhar
@@ -187,8 +229,9 @@ export function PlacesAutocomplete({
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
+          className="bg-white text-gray-900"
         />
-        <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
+        <div className="flex items-center gap-2 text-xs text-amber-600">
           <AlertCircle className="h-3 w-3" />
           <span>
             Google Maps não carregado. Configure
@@ -201,9 +244,13 @@ export function PlacesAutocomplete({
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="w-full" />
+      <div 
+        ref={containerRef} 
+        className="w-full [color-scheme:light]"
+        style={{ colorScheme: "light" }}
+      />
       {!isLoaded && !loadError && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-white/50 dark:bg-gray-800/50">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-white/80">
           <span className="text-xs text-gray-500">Carregando...</span>
         </div>
       )}
