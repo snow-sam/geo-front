@@ -24,8 +24,23 @@ export function PlacesAutocomplete({
   placeholder,
   disabled,
 }: PlacesAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const autocompleteElementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
+  
+  // Interface para o evento do PlaceAutocompleteElement
+  interface PlaceSelectEventDetail {
+    place: {
+      formattedAddress?: string;
+      geometry?: {
+        location: {
+          lat: () => number;
+          lng: () => number;
+        };
+      };
+      id?: string;
+    };
+  }
+  
   const [isLoaded, setIsLoaded] = useState(() => {
     // Verificar imediatamente no estado inicial
     return typeof window !== "undefined" && 
@@ -89,59 +104,102 @@ export function PlacesAutocomplete({
   }, [isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded || !inputRef.current || disabled) return;
+    if (!isLoaded || !containerRef.current || disabled) return;
+
+    // Limpar elemento anterior se existir
+    if (autocompleteElementRef.current && containerRef.current.contains(autocompleteElementRef.current)) {
+      containerRef.current.removeChild(autocompleteElementRef.current);
+    }
 
     try {
-      // Inicializar autocomplete
-      autocompleteRef.current = new google.maps.places.Autocomplete(
-        inputRef.current,
-        {
-          componentRestrictions: { country: "br" }, // Restringir para Brasil
-          fields: ["address_components", "formatted_address", "geometry", "place_id"],
-          types: ["address"], // Focar em endereços
+      // Criar o elemento PlaceAutocompleteElement
+      const autocompleteElement = new google.maps.places.PlaceAutocompleteElement({
+        componentRestrictions: { country: "br" }, // Restringir para Brasil
+      });
+
+      // Configurar tema light via atributo HTML
+      autocompleteElement.setAttribute("theme", "light");
+
+      // Adicionar o elemento ao container
+      containerRef.current.innerHTML = "";
+      containerRef.current.appendChild(autocompleteElement);
+
+      // Configurar o input interno do elemento
+      const inputElement = autocompleteElement.querySelector("input");
+      if (inputElement) {
+        if (placeholder) {
+          inputElement.placeholder = placeholder;
         }
-      );
+        inputElement.value = value;
+        inputElement.disabled = disabled || false;
+        inputElement.setAttribute("autocomplete", "off");
+        
+        // Aplicar estilos do shadcn/ui Input
+        inputElement.className = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+      }
 
       // Adicionar listener para quando um lugar for selecionado
-      const listener = autocompleteRef.current.addListener(
-        "place_changed",
-        () => {
-          const place = autocompleteRef.current?.getPlace();
+      const handlePlaceChange = (event: Event) => {
+        const customEvent = event as CustomEvent<PlaceSelectEventDetail>;
+        const place = customEvent.detail?.place;
 
-          if (!place || !place.geometry || !place.geometry.location) {
-            console.error("Nenhum detalhe disponível para o lugar selecionado");
-            return;
-          }
-
-          const address = place.formatted_address || "";
-          const latitude = place.geometry.location.lat();
-          const longitude = place.geometry.location.lng();
-          const placeId = place.place_id || "";
-
-          // Atualizar o valor do input
-          onChange(address);
-
-          // Chamar callback com os dados completos
-          if (onPlaceSelected) {
-            onPlaceSelected({
-              address,
-              latitude,
-              longitude,
-              placeId,
-            });
-          }
+        if (!place || !place.geometry?.location) {
+          console.error("Nenhum detalhe disponível para o lugar selecionado");
+          return;
         }
-      );
+
+        const address = place.formattedAddress || "";
+        const latitude = place.geometry.location.lat();
+        const longitude = place.geometry.location.lng();
+        const placeId = place.id || "";
+
+        // Atualizar o valor do input
+        onChange(address);
+
+        // Chamar callback com os dados completos
+        if (onPlaceSelected) {
+          onPlaceSelected({
+            address,
+            latitude,
+            longitude,
+            placeId,
+          });
+        }
+      };
+
+      autocompleteElement.addEventListener("gmp-placeselect", handlePlaceChange);
+
+      // Listener para mudanças no input
+      const handleInputChange = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        onChange(target.value);
+      };
+
+      const inputEl = autocompleteElement.querySelector("input");
+      if (inputEl) {
+        inputEl.addEventListener("input", handleInputChange);
+      }
+
+      autocompleteElementRef.current = autocompleteElement;
+      
+      // Capturar referências para o cleanup
+      const container = containerRef.current;
 
       return () => {
-        if (listener) {
-          google.maps.event.removeListener(listener);
+        autocompleteElement.removeEventListener("gmp-placeselect", handlePlaceChange);
+        if (inputEl) {
+          inputEl.removeEventListener("input", handleInputChange);
         }
+        // Remover elemento do DOM
+        if (container && container.contains(autocompleteElement)) {
+          container.removeChild(autocompleteElement);
+        }
+        autocompleteElementRef.current = null;
       };
     } catch (error) {
       console.error("Erro ao inicializar Google Places Autocomplete:", error);
     }
-  }, [isLoaded, onChange, onPlaceSelected, disabled]);
+  }, [isLoaded, onChange, onPlaceSelected, disabled, placeholder, value]);
 
   // Se houver erro no carregamento, mostrar input normal com aviso
   if (loadError) {
@@ -166,16 +224,9 @@ export function PlacesAutocomplete({
 
   return (
     <div className="relative">
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled || !isLoaded}
-        autoComplete="off"
-      />
+      <div ref={containerRef} className="w-full" />
       {!isLoaded && !loadError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-md">
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-md z-10">
           <span className="text-xs text-gray-500">Carregando...</span>
         </div>
       )}
