@@ -7,6 +7,7 @@ import * as z from "zod";
 import { Loader2, Mail, Lock, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth";
 
 import {
   Form,
@@ -51,31 +52,25 @@ export function CadastroForm() {
     setError(null);
 
     try {
-      // Usar API route local para definir cookies corretamente
-      const response = await fetch("/api/auth/sign-up", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: values.name,
-          email: values.email,
-          password: values.password,
-        }),
-        credentials: "include",
+      const result = await authClient.signUp.email({
+        email: values.email,
+        password: values.password,
+        name: values.name,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || result.error) {
-        setError(result.error?.message || "Erro ao criar conta");
+      if (result.error) {
+        setError(result.error.message || "Erro ao criar conta");
         return;
       }
 
       router.push("/");
       router.refresh();
-    } catch {
-      setError("Erro ao conectar com o servidor");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao conectar com o servidor"
+      );
     } finally {
       setIsLoading(false);
     }

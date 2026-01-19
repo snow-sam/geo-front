@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { organizationClient } from "@/lib/organization-client";
+import { authClient } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -57,10 +57,15 @@ export function RoleManager({ member, open, onClose, onUpdate }: RoleManagerProp
     setError(null);
 
     try {
-      await organizationClient.updateMemberRole({
+      const result = await authClient.organization.updateMemberRole({
         memberId: member.id,
         role: selectedRole,
       });
+      
+      if (result.error) {
+        setError(result.error.message || "Erro ao alterar role do membro");
+        return;
+      }
       onUpdate();
       onClose();
     } catch (err) {

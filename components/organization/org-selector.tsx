@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Check, ChevronsUpDown, Plus, Settings } from "lucide-react";
-import { organizationClient, setActiveOrganization } from "@/lib/organization-client";
+import { authClient } from "@/lib/auth";
 import { useWorkspace } from "@/components/organization/workspace-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +34,7 @@ export function OrgSelector() {
   const loadOrganizations = async () => {
     try {
       setIsLoading(true);
-      const orgsResult = await organizationClient.list();
+      const orgsResult = await authClient.organization.list();
       
       // Handle both array and object with organizations property
       const rawOrgs = orgsResult.data 
@@ -55,11 +55,10 @@ export function OrgSelector() {
       
       setOrganizations(orgsData);
 
-      // Get active organization from session (usando API route local)
-      const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
-      const sessionData = await sessionRes.json();
-      if (sessionData?.session?.activeOrganizationId) {
-        const activeOrgId = sessionData.session.activeOrganizationId;
+      // Get active organization from session
+      const sessionResult = await authClient.getSession();
+      if (sessionResult.data?.session?.activeOrganizationId) {
+        const activeOrgId = sessionResult.data.session.activeOrganizationId;
         const active = orgsData.find((org: Organization) => org.id === activeOrgId);
         if (active) {
           setActiveOrg(active);
@@ -67,9 +66,8 @@ export function OrgSelector() {
         } else if (orgsData.length > 0) {
           // Active org not found in list, set first one
           const firstOrg = orgsData[0];
-          await setActiveOrganization({
+          await authClient.organization.setActive({
             organizationId: firstOrg.id,
-            organizationSlug: firstOrg.slug,
           });
           setActiveOrg(firstOrg);
           updateWorkspaceId(firstOrg.id);
@@ -77,9 +75,8 @@ export function OrgSelector() {
       } else if (orgsData.length > 0) {
         // No active org in session, set first one
         const firstOrg = orgsData[0];
-        await setActiveOrganization({
+        await authClient.organization.setActive({
           organizationId: firstOrg.id,
-          organizationSlug: firstOrg.slug,
         });
         setActiveOrg(firstOrg);
         updateWorkspaceId(firstOrg.id);
@@ -95,9 +92,8 @@ export function OrgSelector() {
     try {
       const org = organizations.find((o) => o.id === orgId);
       if (org) {
-        await setActiveOrganization({
+        await authClient.organization.setActive({
           organizationId: org.id,
-          organizationSlug: org.slug,
         });
         setActiveOrg(org);
         updateWorkspaceId(orgId); // Update context, cookie and localStorage

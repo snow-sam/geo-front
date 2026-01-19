@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Route, LogOut, Loader2, Truck } from "lucide-react";
 import Link from "next/link";
+import { authClient } from "@/lib/auth";
 
 import {
   Sidebar,
@@ -35,10 +36,7 @@ export function TecnicoSidebar() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch("/api/auth/sign-out", {
-        method: "POST",
-        credentials: "include",
-      });
+      await authClient.signOut();
       router.push("/tecnico/login");
       router.refresh();
     } catch (error) {

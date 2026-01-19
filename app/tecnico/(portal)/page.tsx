@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Route, Calendar, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { getTecnicoMe, getTecnicoRoteiros, setWorkspaceId } from "@/lib/api";
-import { organizationClient } from "@/lib/organization-client";
 import { RoteiroView } from "@/components/tecnico-portal/roteiro-view";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,32 +60,27 @@ export default function TecnicoPortalPage() {
       // Se não houver workspace, tentar buscar da sessão
       if (!workspaceId) {
         try {
-          const sessionRes = await fetch("/api/auth/session", { 
-            credentials: "include" 
-          });
+          const sessionResult = await authClient.getSession();
           
-          if (!sessionRes.ok) {
+          if (sessionResult.error) {
             throw new Error("Erro ao buscar sessão");
           }
           
-          const sessionData = await sessionRes.json();
-          console.log("[Portal Técnico] sessionData:", sessionData);
-          if (sessionData?.session?.activeOrganizationId) {
-            workspaceId = sessionData.session.activeOrganizationId;
+          console.log("[Portal Técnico] sessionData:", sessionResult.data);
+          if (sessionResult.data?.session?.activeOrganizationId) {
+            workspaceId = sessionResult.data.session.activeOrganizationId;
             setWorkspaceId(workspaceId);
           } else {
             // Tentar buscar a primeira organização
-            const orgsResult = await organizationClient.list();
+            const orgsResult = await authClient.organization.list();
             const orgsData = orgsResult.data 
               ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
               : [];
             
             if (orgsData.length > 0) {
               const firstOrg = orgsData[0];
-              const { setActiveOrganization } = await import("@/lib/organization-client");
-              await setActiveOrganization({
+              await authClient.organization.setActive({
                 organizationId: firstOrg.id,
-                organizationSlug: firstOrg.slug,
               });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);

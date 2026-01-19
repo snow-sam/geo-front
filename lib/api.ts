@@ -214,14 +214,11 @@ async function getTecnicoWorkspace(): Promise<string | null> {
     
     // Método 3: Tentar obter através do userId da sessão
     try {
-      const sessionRes = await fetch("/api/auth/session", {
-        credentials: "include",
-        cache: "no-store",
-      });
+      const { authClient } = await import("@/lib/auth");
+      const sessionResult = await authClient.getSession();
       
-      if (sessionRes.ok) {
-        const sessionData = await sessionRes.json();
-        const userId = sessionData?.user?.id;
+      if (sessionResult.data) {
+        const userId = sessionResult.data.user?.id;
         
         if (userId) {
           // Tentar endpoint que retorna workspace através do userId
@@ -275,23 +272,18 @@ async function fetchAPI<T>(
   if (shouldFetchFromSession && typeof window !== "undefined") {
     try {
       // Fazer requisição síncrona para buscar workspace antes de continuar
-      const sessionRes = await fetch("/api/auth/session", { 
-        credentials: "include",
-        cache: "no-store"
-      });
+      const { authClient } = await import("@/lib/auth");
+      const sessionResult = await authClient.getSession();
       
-      if (sessionRes.ok) {
-        const sessionData = await sessionRes.json();
-        
-        if (sessionData?.session?.activeOrganizationId) {
-          workspaceId = sessionData.session.activeOrganizationId;
+      if (sessionResult.data) {
+        if (sessionResult.data.session?.activeOrganizationId) {
+          workspaceId = sessionResult.data.session.activeOrganizationId;
           // Definir imediatamente para próximas requisições
           setWorkspaceId(workspaceId);
         } else {
           // Tentar buscar organizações se não houver workspace ativo
           try {
-            const { organizationClient } = await import("@/lib/organization-client");
-            const orgsResult = await organizationClient.list();
+            const orgsResult = await authClient.organization.list();
             const orgsData = orgsResult.data 
               ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
               : [];
@@ -299,10 +291,8 @@ async function fetchAPI<T>(
             if (orgsData.length > 0) {
               const firstOrg = orgsData[0];
               // Definir como ativa
-              const { setActiveOrganization } = await import("@/lib/organization-client");
-              await setActiveOrganization({
+              await authClient.organization.setActive({
                 organizationId: firstOrg.id,
-                organizationSlug: firstOrg.slug,
               });
               workspaceId = firstOrg.id;
               setWorkspaceId(workspaceId);
@@ -450,15 +440,12 @@ async function fetchAPI<T>(
               }
               
               // Tentar buscar da sessão novamente
-              const sessionRes = await fetch("/api/auth/session", { 
-                credentials: "include",
-                cache: "no-store"
-              });
+              const { authClient } = await import("@/lib/auth");
+              const sessionResult = await authClient.getSession();
               
-              if (sessionRes.ok) {
-                const sessionData = await sessionRes.json();
-                if (sessionData?.session?.activeOrganizationId) {
-                  const newWorkspaceId = sessionData.session.activeOrganizationId;
+              if (sessionResult.data) {
+                if (sessionResult.data.session?.activeOrganizationId) {
+                  const newWorkspaceId = sessionResult.data.session.activeOrganizationId;
                   setWorkspaceId(newWorkspaceId);
                   // Fazer retry automático da requisição original
                   return fetchAPI<T>(endpoint, options);
@@ -466,18 +453,16 @@ async function fetchAPI<T>(
                   // Se for requisição de técnico e não houver workspace, tentar buscar organizações novamente
                   if (endpoint.includes('/tecnico/')) {
                     try {
-                      const { organizationClient } = await import("@/lib/organization-client");
-                      const orgsResult = await organizationClient.list();
+                      const { authClient } = await import("@/lib/auth");
+                      const orgsResult = await authClient.organization.list();
                       const orgsData = orgsResult.data 
                         ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
                         : [];
                       
                       if (orgsData.length > 0) {
                         const firstOrg = orgsData[0];
-                        const { setActiveOrganization } = await import("@/lib/organization-client");
-                        await setActiveOrganization({
+                        await authClient.organization.setActive({
                           organizationId: firstOrg.id,
-                          organizationSlug: firstOrg.slug,
                         });
                         const newWorkspaceId = firstOrg.id;
                         setWorkspaceId(newWorkspaceId);

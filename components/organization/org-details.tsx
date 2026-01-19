@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Building2, Pencil, Loader2, Save, X } from "lucide-react";
-import { organizationClient } from "@/lib/organization-client";
+import { authClient } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -57,7 +57,7 @@ export function OrgDetails({ organization, onUpdate, canEdit }: OrgDetailsProps)
     setError(null);
 
     try {
-      const result = await organizationClient.update({
+      const result = await authClient.organization.update({
         name: values.name,
         slug: values.slug,
       });

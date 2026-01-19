@@ -7,7 +7,7 @@ import * as z from "zod";
 import { Loader2, Mail, Lock, Truck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setWorkspaceId } from "@/lib/api";
-import { organizationClient } from "@/lib/organization-client";
+import { authClient } from "@/lib/auth";
 
 import {
   Form,
@@ -46,41 +46,28 @@ export function TecnicoLoginForm() {
     setError(null);
 
     try {
-      // Usar API route local para definir cookies corretamente
-      const response = await fetch("/api/auth/sign-in", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-        credentials: "include",
+      const result = await authClient.signIn.email({
+        email: values.email,
+        password: values.password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || result.error) {
-        setError(result.error?.message || "Email ou senha inválidos");
+      if (result.error) {
+        setError(result.error.message || "Email ou senha inválidos");
         return;
       }
 
       // Buscar sessão para obter o workspace ID
       try {
-        const sessionRes = await fetch("/api/auth/session", { 
-          credentials: "include" 
-        });
-        const sessionData = await sessionRes.json();
+        const sessionResult = await authClient.getSession();
         
         let workspaceId: string | null = null;
         
         // Tentar obter o workspace ID da sessão
-        if (sessionData?.session?.activeOrganizationId) {
-          workspaceId = sessionData.session.activeOrganizationId;
+        if (sessionResult.data?.session?.activeOrganizationId) {
+          workspaceId = sessionResult.data.session.activeOrganizationId;
         } else {
           // Se não houver workspace ativo, buscar a primeira organização
-          const orgsResult = await organizationClient.list();
+          const orgsResult = await authClient.organization.list();
           const orgsData = orgsResult.data 
             ? (Array.isArray(orgsResult.data) ? orgsResult.data : [])
             : [];
@@ -88,10 +75,8 @@ export function TecnicoLoginForm() {
           if (orgsData.length > 0) {
             const firstOrg = orgsData[0];
             // Definir como ativa
-            const { setActiveOrganization } = await import("@/lib/organization-client");
-            await setActiveOrganization({
+            await authClient.organization.setActive({
               organizationId: firstOrg.id,
-              organizationSlug: firstOrg.slug,
             });
             workspaceId = firstOrg.id;
           }
@@ -108,8 +93,12 @@ export function TecnicoLoginForm() {
       const callbackUrl = searchParams.get("callbackUrl") || "/tecnico";
       router.push(callbackUrl);
       router.refresh();
-    } catch {
-      setError("Erro ao conectar com o servidor");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao conectar com o servidor"
+      );
     } finally {
       setIsLoading(false);
     }
