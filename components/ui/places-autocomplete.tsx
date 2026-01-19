@@ -119,9 +119,13 @@ export function PlacesAutocomplete({
       }
 
       const address = place.formattedAddress ?? "";
-      const latitude = location.lat();
-      const longitude = location.lng();
+      
+      // Na nova API, location pode ser um objeto LatLng com métodos ou propriedades diretas
+      const latitude = typeof location.lat === "function" ? location.lat() : location.lat;
+      const longitude = typeof location.lng === "function" ? location.lng() : location.lng;
       const placeId = place.id ?? "";
+
+      console.log("Place selecionado:", { address, latitude, longitude, placeId });
 
       // Atualiza o valor do input
       if (inputRef.current) {
@@ -172,9 +176,9 @@ export function PlacesAutocomplete({
           input.disabled = !!disabled;
           input.autocomplete = "off";
 
-          // Estilização com fundo branco explícito para evitar dark mode
+          // Estilização consistente com o Input padrão do shadcn/ui
           input.className =
-            "flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+            "file:text-foreground placeholder:text-muted-foreground border-input h-9 w-full min-w-0 rounded-md border bg-white px-3 py-1 text-base text-gray-900 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
           input.addEventListener("input", (e) => {
             onChangeRef.current((e.target as HTMLInputElement).value);
@@ -229,7 +233,6 @@ export function PlacesAutocomplete({
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
-          className="bg-white text-gray-900"
         />
         <div className="flex items-center gap-2 text-xs text-amber-600">
           <AlertCircle className="h-3 w-3" />
