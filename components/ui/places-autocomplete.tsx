@@ -17,6 +17,19 @@ interface PlacesAutocompleteProps {
   disabled?: boolean;
 }
 
+interface PlaceSelectEventDetail {
+  place: {
+    formattedAddress?: string;
+    placeId?: string;
+    geometry?: {
+      location: {
+        lat: () => number;
+        lng: () => number;
+      };
+    };
+  };
+}
+
 export function PlacesAutocomplete({
   value,
   onChange,
@@ -25,39 +38,25 @@ export function PlacesAutocomplete({
   disabled,
 }: PlacesAutocompleteProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const autocompleteElementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
-  
-  // Interface para o evento do PlaceAutocompleteElement
-  interface PlaceSelectEventDetail {
-    place: {
-      formattedAddress?: string;
-      geometry?: {
-        location: {
-          lat: () => number;
-          lng: () => number;
-        };
-      };
-      id?: string;
-    };
-  }
-  
-  const [isLoaded, setIsLoaded] = useState(() => {
-    // Verificar imediatamente no estado inicial
-    return typeof window !== "undefined" && 
-           typeof google !== "undefined" && 
-           !!google.maps?.places;
-  });
+  const autocompleteElementRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const [isLoaded, setIsLoaded] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      typeof google !== "undefined" &&
+      !!google.maps?.places
+  );
   const [loadError, setLoadError] = useState(false);
-  const hasChecked = useRef(false);
 
+  /**
+   * Aguarda carregamento do Google Maps
+   */
   useEffect(() => {
-    // Evitar múltiplas verificações
-    if (hasChecked.current || isLoaded) return;
-    hasChecked.current = true;
+    if (isLoaded) return;
 
-    // Verificar se o Google Maps já está carregado
-    const checkGoogleMapsLoaded = () => {
-      if (typeof google !== "undefined" && google.maps && google.maps.places) {
+    const checkLoaded = () => {
+      if (typeof google !== "undefined" && google.maps?.places) {
         setIsLoaded(true);
         setLoadError(false);
         return true;
@@ -65,143 +64,120 @@ export function PlacesAutocomplete({
       return false;
     };
 
-    // Verificar imediatamente
-    if (checkGoogleMapsLoaded()) {
-      return;
-    }
+    if (checkLoaded()) return;
 
-    // Se não estiver carregado, verificar periodicamente a cada 300ms
     const intervalId = setInterval(() => {
-      if (checkGoogleMapsLoaded()) {
+      if (checkLoaded()) {
         clearInterval(intervalId);
       }
     }, 300);
 
-    // Listener para o evento customizado
-    const handleLoaded = () => {
-      if (checkGoogleMapsLoaded()) {
-        clearInterval(intervalId);
-      }
-    };
-
-    window.addEventListener("google-maps-loaded", handleLoaded);
-
-    // Timeout de 10 segundos para detectar falha no carregamento
     const timeoutId = setTimeout(() => {
-      const stillChecking = !checkGoogleMapsLoaded();
-      if (stillChecking) {
-        console.warn("Google Maps não carregou após 10 segundos. Verifique a API Key.");
+      if (!checkLoaded()) {
+        console.warn("Google Maps não carregou. Verifique a API Key.");
         setLoadError(true);
         clearInterval(intervalId);
       }
-    }, 10000);
+    }, 10_000);
 
     return () => {
-      window.removeEventListener("google-maps-loaded", handleLoaded);
-      clearTimeout(timeoutId);
       clearInterval(intervalId);
+      clearTimeout(timeoutId);
     };
   }, [isLoaded]);
 
+  /**
+   * Inicializa o PlaceAutocompleteElement uma única vez
+   */
   useEffect(() => {
     if (!isLoaded || !containerRef.current || disabled) return;
-
-    // Limpar elemento anterior se existir
-    if (autocompleteElementRef.current && containerRef.current.contains(autocompleteElementRef.current)) {
-      containerRef.current.removeChild(autocompleteElementRef.current);
-    }
+    if (autocompleteElementRef.current) return;
 
     try {
-      // Criar o elemento PlaceAutocompleteElement
-      const autocompleteElement = new google.maps.places.PlaceAutocompleteElement({
-        componentRestrictions: { country: "br" }, // Restringir para Brasil
-      });
+      const autocompleteElement =
+        new google.maps.places.PlaceAutocompleteElement({
+          componentRestrictions: { country: "br" },
+        });
 
-      // Configurar tema light via atributo HTML
       autocompleteElement.setAttribute("theme", "light");
 
-      // Adicionar o elemento ao container
-      containerRef.current.innerHTML = "";
-      containerRef.current.appendChild(autocompleteElement);
+      containerRef.current.replaceChildren(autocompleteElement);
 
-      // Configurar o input interno do elemento
-      const inputElement = autocompleteElement.querySelector("input");
-      if (inputElement) {
-        if (placeholder) {
-          inputElement.placeholder = placeholder;
-        }
-        inputElement.value = value;
-        inputElement.disabled = disabled || false;
-        inputElement.setAttribute("autocomplete", "off");
-        
-        // Aplicar estilos do shadcn/ui Input
-        inputElement.className = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+      const input = autocompleteElement.querySelector(
+        "input"
+      ) as HTMLInputElement | null;
+
+      if (input) {
+        inputRef.current = input;
+        input.placeholder = placeholder ?? "";
+        input.value = value;
+        input.disabled = !!disabled;
+        input.autocomplete = "off";
+
+        input.className =
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
+        input.addEventListener("input", (e) => {
+          onChange((e.target as HTMLInputElement).value);
+        });
       }
 
-      // Adicionar listener para quando um lugar for selecionado
-      const handlePlaceChange = (event: Event) => {
-        const customEvent = event as CustomEvent<PlaceSelectEventDetail>;
-        const place = customEvent.detail?.place;
+      const handlePlaceSelect = (
+        event: CustomEvent<PlaceSelectEventDetail>
+      ) => {
+        const place = event.detail.place;
 
-        if (!place || !place.geometry?.location) {
-          console.error("Nenhum detalhe disponível para o lugar selecionado");
-          return;
-        }
+        if (!place?.geometry?.location) return;
 
-        const address = place.formattedAddress || "";
+        const address = place.formattedAddress ?? "";
         const latitude = place.geometry.location.lat();
         const longitude = place.geometry.location.lng();
-        const placeId = place.id || "";
+        const placeId = place.placeId ?? "";
 
-        // Atualizar o valor do input
         onChange(address);
 
-        // Chamar callback com os dados completos
-        if (onPlaceSelected) {
-          onPlaceSelected({
-            address,
-            latitude,
-            longitude,
-            placeId,
-          });
-        }
+        onPlaceSelected?.({
+          address,
+          latitude,
+          longitude,
+          placeId,
+        });
       };
 
-      autocompleteElement.addEventListener("gmp-placeselect", handlePlaceChange);
-
-      // Listener para mudanças no input
-      const handleInputChange = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        onChange(target.value);
-      };
-
-      const inputEl = autocompleteElement.querySelector("input");
-      if (inputEl) {
-        inputEl.addEventListener("input", handleInputChange);
-      }
+      autocompleteElement.addEventListener(
+        "gmp-placeselect",
+        handlePlaceSelect as EventListener
+      );
 
       autocompleteElementRef.current = autocompleteElement;
-      
-      // Capturar referências para o cleanup
-      const container = containerRef.current;
 
       return () => {
-        autocompleteElement.removeEventListener("gmp-placeselect", handlePlaceChange);
-        if (inputEl) {
-          inputEl.removeEventListener("input", handleInputChange);
-        }
-        // Remover elemento do DOM
-        if (container && container.contains(autocompleteElement)) {
-          container.removeChild(autocompleteElement);
-        }
+        autocompleteElement.removeEventListener(
+          "gmp-placeselect",
+          handlePlaceSelect as EventListener
+        );
+        containerRef.current?.replaceChildren();
         autocompleteElementRef.current = null;
+        inputRef.current = null;
       };
-    } catch (error) {
-      console.error("Erro ao inicializar Google Places Autocomplete:", error);
+    } catch (err) {
+      console.error("Erro ao inicializar Places Autocomplete:", err);
+      setLoadError(true);
     }
-  }, [isLoaded, onChange, onPlaceSelected, disabled, placeholder, value]);
+  }, [isLoaded, disabled, placeholder, onChange, onPlaceSelected, value]);
 
-  // Se houver erro no carregamento, mostrar input normal com aviso
+  /**
+   * Sincroniza value externo → input interno
+   */
+  useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== value) {
+      inputRef.current.value = value;
+    }
+  }, [value]);
+
+  /**
+   * Fallback quando Google Maps falhar
+   */
   if (loadError) {
     return (
       <div className="space-y-2">
@@ -215,7 +191,8 @@ export function PlacesAutocomplete({
         <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
           <AlertCircle className="h-3 w-3" />
           <span>
-            Google Maps não carregado. Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY no arquivo .env.local
+            Google Maps não carregado. Configure
+            NEXT_PUBLIC_GOOGLE_MAPS_API_KEY no .env.local
           </span>
         </div>
       </div>
@@ -226,11 +203,10 @@ export function PlacesAutocomplete({
     <div className="relative">
       <div ref={containerRef} className="w-full" />
       {!isLoaded && !loadError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-md z-10">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-white/50 dark:bg-gray-800/50">
           <span className="text-xs text-gray-500">Carregando...</span>
         </div>
       )}
     </div>
   );
 }
-
