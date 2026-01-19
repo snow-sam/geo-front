@@ -1,46 +1,34 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { headers } from "next/headers";
+import { z } from "zod";
+import { AuthApiProxy } from "@/lib/auth-proxy";
 
-const AUTH_API_URL =
-  process.env.NEXT_PUBLIC_AUTH_API_URL ||
-  "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
-
-async function getOrigin(): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  return `${protocol}://${host}`;
-}
+const createOrganizationSchema = z.object({
+  name: z.string().min(1, { message: "Nome da organização é obrigatório" }),
+  slug: z.string().min(1, { message: "Slug da organização é obrigatório" }),
+  logo: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  userId: z.string().optional(),
+  keepCurrentActiveOrganization: z.boolean().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const cookies = request.cookies.getAll();
-    const cookieHeader = cookies
-      .map((cookie) => `${cookie.name}=${cookie.value}`)
-      .join("; ");
-
-    const origin = await getOrigin();
-
-    const response = await fetch(`${AUTH_API_URL}/organization/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: cookieHeader,
-        Origin: origin,
-      },
-      body: JSON.stringify(body),
+    const proxy = AuthApiProxy.getInstance();
+    return proxy.createOrganization(request, body, {
+      inputSchema: createOrganizationSchema,
     });
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("Organization create error:", error);
-    return NextResponse.json(
+    if (error instanceof SyntaxError) {
+      return Response.json(
+        { error: { message: "Corpo da requisição inválido. JSON esperado." } },
+        { status: 400 }
+      );
+    }
+
+    return Response.json(
       { error: { message: "Erro ao criar organização" } },
       { status: 500 }
     );
   }
 }
-

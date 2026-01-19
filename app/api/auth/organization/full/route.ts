@@ -1,41 +1,67 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { headers } from "next/headers";
+import { z } from "zod";
+import { AuthApiProxy } from "@/lib/auth-proxy";
 
-const AUTH_API_URL =
-  process.env.NEXT_PUBLIC_AUTH_API_URL ||
-  "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
-
-async function getOrigin(): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  return `${protocol}://${host}`;
-}
+const getFullOrganizationQuerySchema = z.object({
+  organizationId: z.string().min(1, { message: "ID da organização inválido" }).optional(),
+  organizationSlug: z.string().min(1, { message: "Slug da organização inválido" }).optional(),
+  membersLimit: z
+    .string()
+    .regex(/^\d+$/, { message: "Limite de membros deve ser um número válido" })
+    .optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const cookies = request.cookies.getAll();
-    const cookieHeader = cookies
-      .map((cookie) => `${cookie.name}=${cookie.value}`)
-      .join("; ");
+    const proxy = AuthApiProxy.getInstance();
 
-    const origin = await getOrigin();
+    // Extrair e validar query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const queryParams: Record<string, string> = {};
 
-    const response = await fetch(`${AUTH_API_URL}/organization/get-full-organization`, {
-      method: "GET",
-      headers: {
-        Cookie: cookieHeader,
-        Origin: origin,
-      },
+    if (searchParams.has("organizationId")) {
+      queryParams.organizationId = searchParams.get("organizationId")!;
+    }
+    if (searchParams.has("organizationSlug")) {
+      queryParams.organizationSlug = searchParams.get("organizationSlug")!;
+    }
+    if (searchParams.has("membersLimit")) {
+      queryParams.membersLimit = searchParams.get("membersLimit")!;
+    }
+
+    // Validar query parameters com Zod
+    const validatedQuery = getFullOrganizationQuerySchema.parse(queryParams);
+
+    // Converter para Record<string, string> removendo undefined
+    const query: Record<string, string> = {};
+    if (validatedQuery.organizationId) {
+      query.organizationId = validatedQuery.organizationId;
+    }
+    if (validatedQuery.organizationSlug) {
+      query.organizationSlug = validatedQuery.organizationSlug;
+    }
+    if (validatedQuery.membersLimit) {
+      query.membersLimit = validatedQuery.membersLimit;
+    }
+
+    return await proxy.getFullOrganization(request, {
+      query: Object.keys(query).length > 0 ? query : undefined,
     });
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("Organization full error:", error);
-    return NextResponse.json(
-      { error: { message: "Erro ao obter organização" } },
+    if (error instanceof z.ZodError) {
+      return Response.json(
+        {
+          error: {
+            message: "Parâmetros de consulta inválidos",
+            details: error.issues,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    return Response.json(
+      { error: { message: "Erro ao obter organização completa" } },
       { status: 500 }
     );
   }

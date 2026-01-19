@@ -235,12 +235,35 @@ export class AuthApiProxy {
       body?: unknown;
       query?: Record<string, string>;
       timeout?: number;
+      inputSchema?: ZodType;
       responseSchema?: ZodType<T>;
     }
   ): Promise<NextResponse> => {
-    const { body, query, timeout = 30000 } = options || {};
+    const { body, query, timeout = 30000, inputSchema } = options || {};
 
     try {
+      // Validar entrada com Zod se schema fornecido
+      let validatedBody = body;
+      if (inputSchema && body !== undefined) {
+        try {
+          validatedBody = inputSchema.parse(body);
+        } catch (validationError) {
+          if (validationError instanceof z.ZodError) {
+            // Retornar erro de validação diretamente com detalhes
+            return NextResponse.json(
+              {
+                error: {
+                  message: "Dados inválidos. Verifique as informações enviadas.",
+                  details: validationError.issues,
+                },
+              },
+              { status: 400 }
+            );
+          }
+          throw validationError;
+        }
+      }
+
       const origin = await this._buildOrigin();
       const cookies = this._buildCookies(request);
       const headers = this._buildHeaders(origin, cookies);
@@ -255,8 +278,8 @@ export class AuthApiProxy {
         headers,
       };
 
-      if (body) {
-        init.body = JSON.stringify(body);
+      if (validatedBody !== undefined) {
+        init.body = JSON.stringify(validatedBody);
       }
 
       // Timeout usando AbortController
@@ -415,11 +438,13 @@ export class AuthApiProxy {
     errorDescription: ErrorDescription,
     options?: {
       body?: unknown;
+      inputSchema?: ZodType;
       responseSchema?: ZodType<T>;
     }
   ): Promise<NextResponse> => {
     return this._makeRequest<T>(request, "POST", endpoint, errorDescription, {
       body: options?.body,
+      inputSchema: options?.inputSchema,
       responseSchema: options?.responseSchema,
     });
   };
@@ -430,11 +455,13 @@ export class AuthApiProxy {
     errorDescription: ErrorDescription,
     options?: {
       body?: unknown;
+      inputSchema?: ZodType;
       responseSchema?: ZodType<T>;
     }
   ): Promise<NextResponse> => {
     return this._makeRequest<T>(request, "PUT", endpoint, errorDescription, {
       body: options?.body,
+      inputSchema: options?.inputSchema,
       responseSchema: options?.responseSchema,
     });
   };
@@ -455,6 +482,40 @@ export class AuthApiProxy {
   };
 
   // Métodos públicos GET
+  public getFullOrganization = async <T = unknown>(
+    request: NextRequest,
+    options?: {
+      query?: Record<string, string>;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/get-full-organization";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization full error:",
+      errorMessage: "Erro ao obter organização completa",
+    };
+
+    return await this.GET<T>(request, endpoint, errorDescription, options);
+  };
+
+  public getInvitation = async <T = unknown>(
+    request: NextRequest,
+    options?: {
+      query?: Record<string, string>;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/get-invitation";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization get invitation error:",
+      errorMessage: "Erro ao obter convite",
+    };
+    return await this.GET<T>(request, endpoint, errorDescription, {
+      query: options?.query,
+      responseSchema: options?.responseSchema,
+    });
+  };
+
   public listOrganizations = async <T = unknown>(
     request: NextRequest,
     options?: {
@@ -472,10 +533,72 @@ export class AuthApiProxy {
   };
 
   // Métodos públicos POST
+  public acceptInvitation = async <T = unknown>(
+    request: NextRequest,
+    body: unknown,
+    options?: {
+      inputSchema?: ZodType;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/accept-invitation";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization accept invitation error:",
+      errorMessage: "Erro ao aceitar convite",
+    };
+    return await this.POST<T>(request, endpoint, errorDescription, {
+      body,
+      inputSchema: options?.inputSchema,
+      responseSchema: options?.responseSchema,
+    });
+  };
+
+  public cancelInvitation = async <T = unknown>(
+    request: NextRequest,
+    body: unknown,
+    options?: {
+      inputSchema?: ZodType;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/cancel-invitation";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization cancel invitation error:",
+      errorMessage: "Erro ao cancelar convite",
+    };
+    return await this.POST<T>(request, endpoint, errorDescription, {
+      body,
+      inputSchema: options?.inputSchema,
+      responseSchema: options?.responseSchema,
+    });
+  };
+
+  public checkOrganizationSlug = async <T = unknown>(
+    request: NextRequest,
+    body: unknown,
+    options?: {
+      inputSchema?: ZodType;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = `/organization/check-slug`;
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization slug check error:",
+      errorMessage: "Erro ao verificar slug da organização",
+    };
+
+    return await this.POST<T>(request, endpoint, errorDescription, {
+      body,
+      inputSchema: options?.inputSchema,
+      responseSchema: options?.responseSchema,
+    });	
+  };
+
   public createOrganization = async <T = unknown>(
     request: NextRequest,
     body: unknown,
     options?: {
+      inputSchema?: ZodType;
       responseSchema?: ZodType<T>;
     }
   ): Promise<NextResponse> => {
@@ -487,6 +610,28 @@ export class AuthApiProxy {
 
     return await this.POST<T>(request, endpoint, errorDescription, {
       body,
+      inputSchema: options?.inputSchema,
+      responseSchema: options?.responseSchema,
+    });
+  };
+
+  public deleteOrganization = async <T = unknown>(
+    request: NextRequest,
+    body: unknown,
+    options?: {
+      inputSchema?: ZodType;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/delete";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization delete error:",
+      errorMessage: "Erro ao deletar organização",
+    };
+
+    return await this.POST<T>(request, endpoint, errorDescription, {
+      body,
+      inputSchema: options?.inputSchema,
       responseSchema: options?.responseSchema,
     });
   };
@@ -495,6 +640,7 @@ export class AuthApiProxy {
     request: NextRequest,
     body: unknown,
     options?: {
+      inputSchema?: ZodType;
       responseSchema?: ZodType<T>;
     }
   ): Promise<NextResponse> => {
@@ -506,15 +652,57 @@ export class AuthApiProxy {
 
     return await this.POST<T>(request, endpoint, errorDescription, {
       body,
+      inputSchema: options?.inputSchema,
       responseSchema: options?.responseSchema,
     });
   };
 
-  // Métodos públicos PUT
+  public rejectInvitation = async <T = unknown>(
+    request: NextRequest,
+    body: unknown,
+    options?: {
+      inputSchema?: ZodType;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/reject-invitation";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization reject invitation error:",
+      errorMessage: "Erro ao rejeitar convite",
+    };
+    return await this.POST<T>(request, endpoint, errorDescription, {
+      body,
+      inputSchema: options?.inputSchema,
+      responseSchema: options?.responseSchema,
+    });
+  };
+
+  public setCurrentActiveOrganization = async <T = unknown>(
+    request: NextRequest,
+    body: unknown,
+    options?: {
+      inputSchema?: ZodType;
+      responseSchema?: ZodType<T>;
+    }
+  ): Promise<NextResponse> => {
+    const endpoint = "/organization/set-active";
+    const errorDescription: ErrorDescription = {
+      errorPrefix: "Organization set active error:",
+      errorMessage: "Erro ao definir organização ativa",
+    };
+
+    return await this.POST<T>(request, endpoint, errorDescription, {
+      body,
+      inputSchema: options?.inputSchema,
+      responseSchema: options?.responseSchema,
+    });
+  };
+
   public updateOrganization = async <T = unknown>(
     request: NextRequest,
     body: unknown,
     options?: {
+      inputSchema?: ZodType;
       responseSchema?: ZodType<T>;
     }
   ): Promise<NextResponse> => {
@@ -524,27 +712,11 @@ export class AuthApiProxy {
       errorMessage: "Erro ao atualizar organização",
     };
 
-    return await this.PUT<T>(request, endpoint, errorDescription, {
+    return await this.POST<T>(request, endpoint, errorDescription, {
       body,
+      inputSchema: options?.inputSchema,
       responseSchema: options?.responseSchema,
     });
-  };
-
-  // Métodos públicos DELETE
-  public deleteOrganization = async <T = unknown>(
-    request: NextRequest,
-    options?: {
-      body?: unknown;
-      responseSchema?: ZodType<T>;
-    }
-  ): Promise<NextResponse> => {
-    const endpoint = "/organization/delete";
-    const errorDescription: ErrorDescription = {
-      errorPrefix: "Organization delete error:",
-      errorMessage: "Erro ao deletar organização",
-    };
-
-    return await this.DELETE<T>(request, endpoint, errorDescription, options);
   };
 
   // Método estático para obter a instância Singleton
