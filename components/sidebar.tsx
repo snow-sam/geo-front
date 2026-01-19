@@ -81,9 +81,13 @@ export function AppSidebar() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await authClient.signOut();
-      router.push("/login");
-      router.refresh();
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/login"); // redirect to login page
+          },
+        },
+      });
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     } finally {

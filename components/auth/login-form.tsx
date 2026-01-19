@@ -48,6 +48,11 @@ export function LoginForm() {
       const result = await authClient.signIn.email({
         email: values.email,
         password: values.password,
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/"); // redirect to dashboard page
+          },
+        },
       });
 
       if (result.error) {
@@ -55,9 +60,6 @@ export function LoginForm() {
         return;
       }
 
-      // Redirecionar para página inicial
-      router.push("/");
-      router.refresh();
     } catch (err) {
       setError(
         err instanceof Error
