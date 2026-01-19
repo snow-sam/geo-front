@@ -7,6 +7,7 @@ import * as z from "zod";
 import { Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth";
 
 import {
   Form,
@@ -44,31 +45,25 @@ export function LoginForm() {
     setError(null);
 
     try {
-      // Usar API route local para definir cookies corretamente
-      const response = await fetch("/api/auth/sign-in", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-        credentials: "include",
+      const result = await authClient.signIn.email({
+        email: values.email,
+        password: values.password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || result.error) {
-        setError(result.error?.message || "Email ou senha inválidos");
+      if (result.error) {
+        setError(result.error.message || "Email ou senha inválidos");
         return;
       }
 
       // Redirecionar para página inicial
       router.push("/");
       router.refresh();
-    } catch {
-      setError("Erro ao conectar com o servidor");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao conectar com o servidor"
+      );
     } finally {
       setIsLoading(false);
     }
