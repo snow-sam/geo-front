@@ -58,8 +58,10 @@ export function OrgDetails({ organization, onUpdate, canEdit }: OrgDetailsProps)
 
     try {
       const result = await authClient.organization.update({
-        name: values.name,
-        slug: values.slug,
+        data: {
+          name: values.name,
+          slug: values.slug,
+        },
       });
 
       if (result.error) {
