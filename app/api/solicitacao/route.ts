@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const AUTH_API_URL =
   process.env.NEXT_PUBLIC_AUTH_API_URL ||
-  "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
+  "https://api.rotgo.com.br/api/v1/auth";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||

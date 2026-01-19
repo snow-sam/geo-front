@@ -53,7 +53,7 @@ export class AuthApiProxy {
   private static instance: AuthApiProxy | null = null;
   private static readonly BASE_URL: string =
     process.env.NEXT_PUBLIC_AUTH_API_URL ||
-    "https://backend-geo-crud--samuelf21.replit.app/api/v1/auth";
+    "https://api.rotgo.com.br/api/v1/auth";
 
   // Construtor privado para prevenir instanciação direta
   private constructor() {}
